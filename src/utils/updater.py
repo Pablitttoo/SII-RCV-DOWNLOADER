@@ -282,3 +282,96 @@ def verificar_actualizaciones_inicio(ventana_padre, version_actual=VERSION_LOCAL
             pass
 
     threading.Thread(target=_tarea_verificacion, daemon=True).start()
+
+
+def verificar_actualizaciones_manual(ventana_padre, version_actual=VERSION_LOCAL, log_cb=None, status_cb=None, final_cb=None):
+    """
+    Comprobación manual de actualización disparada por un botón o clic del usuario.
+    Muestra confirmación si hay versión nueva, o mensaje informativo si está al día o hay error.
+    """
+    def _tarea():
+        try:
+            if status_cb:
+                status_cb("🔍 Comprobando actualizaciones en GitHub...")
+            if log_cb:
+                log_cb("Buscando actualizaciones en GitHub...")
+
+            info = consultar_version_github(REPO_GITHUB)
+            if not info:
+                def _err_conn():
+                    if status_cb:
+                        status_cb("● Listo")
+                    if final_cb:
+                        final_cb()
+                    messagebox.showwarning(
+                        "Actualizaciones",
+                        "No se pudo conectar con GitHub para comprobar actualizaciones.\nVerifica tu conexión a internet.",
+                        parent=ventana_padre
+                    )
+                ventana_padre.after(0, _err_conn)
+                return
+
+            tag_remoto = info.get("tag", "")
+            if not tag_remoto:
+                def _err_tag():
+                    if status_cb:
+                        status_cb("● Listo")
+                    if final_cb:
+                        final_cb()
+                    messagebox.showinfo("Actualizaciones", "No se encontraron versiones publicadas en GitHub.", parent=ventana_padre)
+                ventana_padre.after(0, _err_tag)
+                return
+
+            if es_version_mas_reciente(version_actual, tag_remoto):
+                if log_cb:
+                    log_cb(f"[AVISO] ¡Nueva versión disponible en GitHub! {version_actual} -> {tag_remoto}")
+
+                url_exe = info.get("url_exe")
+                detalles = info.get("body", "").strip()
+                resumen_notas = f"\n\nNovedades de la versión:\n{detalles[:300]}..." if detalles else ""
+
+                def _mostrar_alerta_nueva():
+                    if status_cb:
+                        status_cb(f"✨ Nueva versión {tag_remoto} disponible")
+                    if final_cb:
+                        final_cb()
+                    mensaje = (
+                        f"¡Hay una nueva versión disponible!\n\n"
+                        f"• Tu versión actual: {version_actual}\n"
+                        f"• Nueva versión disponible: {tag_remoto}{resumen_notas}\n\n"
+                        f"¿Deseas descargar e instalar la actualización ahora?"
+                    )
+                    respuesta = messagebox.askyesno(
+                        "Actualización Disponible • SII Gestor Facturas",
+                        mensaje,
+                        parent=ventana_padre
+                    )
+                    if respuesta:
+                        if url_exe:
+                            aplicar_actualizacion_windows(url_exe, ventana_padre=ventana_padre, log_cb=log_cb)
+                        else:
+                            webbrowser.open(info.get("html_url", GITHUB_RELEASES_URL))
+
+                ventana_padre.after(0, _mostrar_alerta_nueva)
+            else:
+                def _mostrar_al_dia():
+                    if status_cb:
+                        status_cb("● Tienes la versión más reciente")
+                    if final_cb:
+                        final_cb()
+                    messagebox.showinfo(
+                        "Versión al día",
+                        f"🎉 ¡Tu aplicación está al día!\n\nTienes instalada la versión más reciente ({version_actual}).",
+                        parent=ventana_padre
+                    )
+                ventana_padre.after(0, _mostrar_al_dia)
+        except Exception as e:
+            def _err_gral(err_msg=str(e)):
+                if status_cb:
+                    status_cb("● Listo")
+                if final_cb:
+                    final_cb()
+                messagebox.showerror("Error", f"Ocurrió un error al buscar actualizaciones:\n{err_msg}", parent=ventana_padre)
+            ventana_padre.after(0, _err_gral)
+
+    threading.Thread(target=_tarea, daemon=True).start()

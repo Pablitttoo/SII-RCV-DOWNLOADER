@@ -40,7 +40,7 @@ from src.core import rcv_engine as script
 from src.core import bhe_engine as script_honorarios
 from src.core import desis_engine as script_facturacion_cl
 from src.ai import glosa_extractor as ai_context
-from src.utils import verificar_actualizaciones_inicio
+from src.utils import verificar_actualizaciones_inicio, verificar_actualizaciones_manual
 from .pdf_viewer import VentanaVisorPDF
 
 # Activar escalado DPI nítido y AppUserModelID para Windows
@@ -694,9 +694,11 @@ class AppSII(tk.Tk):
             fg="#818cf8",
             padx=6,
             pady=1,
-            relief="flat"
+            relief="flat",
+            cursor="hand2"
         )
         lbl_ver_badge.pack(side="left", padx=(6, 0))
+        lbl_ver_badge.bind("<Button-1>", lambda e: self.buscar_actualizaciones_click())
 
         lbl_sub = tk.Label(brand_frame, text="Facturas, Honorarios & DTEs", font=("Segoe UI", 8), bg=C_SIDEBAR, fg=C_TEXT_MUTED)
         lbl_sub.pack(anchor="w", padx=(28 if self._logo_img else 2, 0))
@@ -1718,6 +1720,24 @@ class AppSII(tk.Tk):
         )
         lbl_ver_status.pack(side="right")
 
+        self.btn_buscar_updates = tk.Button(
+            bar,
+            text="🔄 Buscar Actualizaciones",
+            font=("Segoe UI", 8),
+            bg=C_SURFACE_ALT,
+            fg=C_TEXT_MAIN,
+            activebackground="#223150",
+            activeforeground="#ffffff",
+            relief="flat",
+            highlightbackground=C_BORDER,
+            highlightthickness=1,
+            padx=8,
+            pady=2,
+            cursor="hand2",
+            command=self.buscar_actualizaciones_click
+        )
+        self.btn_buscar_updates.pack(side="right", padx=(0, 6))
+
         self.btn_toggle_log = tk.Button(
             bar,
             text="📄 Terminal ▲",
@@ -1806,6 +1826,26 @@ class AppSII(tk.Tk):
             self.txt_logs.see(tk.END)
             self.lbl_status_global.config(text=f"🟢 {txt[:90]}...")
         self.after(0, _append)
+
+    def buscar_actualizaciones_click(self):
+        try:
+            self.btn_buscar_updates.config(state="disabled", text="⏳ Buscando...")
+        except Exception:
+            pass
+
+        def _restaurar():
+            try:
+                self.btn_buscar_updates.config(state="normal", text="🔄 Buscar Actualizaciones")
+            except Exception:
+                pass
+
+        verificar_actualizaciones_manual(
+            ventana_padre=self,
+            version_actual=VERSION_LOCAL,
+            log_cb=self.log,
+            status_cb=lambda s: self.lbl_status_global.config(text=s),
+            final_cb=_restaurar
+        )
 
     def actualizar_subtitulo_vistas(self):
         emp = self.obtener_empresa_actual()

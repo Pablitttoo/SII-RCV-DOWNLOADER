@@ -73,6 +73,13 @@ class VentanaVisorPDF(tk.Toplevel):
         self.crear_interfaz()
         self.cargar_documento()
 
+        # Atajos de teclado interactivos
+        self.bind("<Left>", lambda e: self.pagina_anterior())
+        self.bind("<Right>", lambda e: self.pagina_siguiente())
+        self.bind("<plus>", lambda e: self.zoom_in())
+        self.bind("<minus>", lambda e: self.zoom_out())
+        self.bind("<Escape>", lambda e: self.destroy())
+
     def crear_interfaz(self):
         # 1. Barra Superior de Herramientas (Toolbar)
         tb = tk.Frame(self, bg=C_SIDEBAR, padx=12, pady=8, relief="flat", highlightbackground=C_BORDER, highlightthickness=1)
@@ -177,6 +184,21 @@ class VentanaVisorPDF(tk.Toplevel):
         self.btn_next_pag.pack(side="left", padx=(0, 10))
 
         # Botones de Acción a la derecha
+        tk.Button(
+            tb,
+            text="🖨️ Imprimir",
+            font=("Segoe UI", 8),
+            bg=C_SURFACE_ALT,
+            fg=C_SUCCESS,
+            relief="flat",
+            highlightbackground=C_BORDER,
+            highlightthickness=1,
+            padx=8,
+            pady=2,
+            cursor="hand2",
+            command=self.imprimir_pdf
+        ).pack(side="right", padx=(4, 0))
+
         tk.Button(
             tb,
             text="📂 Abrir Externo",
@@ -326,3 +348,13 @@ class VentanaVisorPDF(tk.Toplevel):
             font=("Segoe UI", 11, "bold"),
             justify="center"
         )
+
+    def imprimir_pdf(self):
+        """Envía el documento a imprimir mediante el visor del sistema o diálogo de impresión."""
+        try:
+            if sys.platform == "win32":
+                os.startfile(self.ruta_pdf, "print")
+            else:
+                abrir_archivo_o_carpeta(self.ruta_pdf)
+        except Exception:
+            abrir_archivo_o_carpeta(self.ruta_pdf)

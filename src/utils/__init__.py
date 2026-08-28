@@ -22,6 +22,7 @@ from .config import (
 )
 from .updater import (
     verificar_actualizaciones_inicio,
+    verificar_actualizaciones_manual,
     consultar_version_github,
     aplicar_actualizacion_windows,
     VERSION_LOCAL,
@@ -43,6 +44,7 @@ __all__ = [
     "leer_credenciales_env",
     "guardar_credenciales_env",
     "verificar_actualizaciones_inicio",
+    "verificar_actualizaciones_manual",
     "consultar_version_github",
     "aplicar_actualizacion_windows",
     "VERSION_LOCAL",
