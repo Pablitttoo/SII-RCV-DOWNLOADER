@@ -184,10 +184,20 @@ def aplicar_actualizacion_windows(url_descarga, ventana_padre=None, log_cb=print
             cmd_content = f"""@echo off
 chcp 65001 >nul
 cd /d "{carpeta_exe}"
+
+:: Limpiar variables de entorno internas de PyInstaller para que el nuevo ejecutable arranque limpio
+set _MEIPASS2=
+set _MEIPASS=
+set _PYI_APPLICATION_HOME_DIR=
+set _PYI_ARCHIVE_FILE=
+set _PYI_PARENT_PID=
+set _PYI_SPLASH_IPC=
+
 :retry_move
 timeout /t 1 /nobreak >nul
 move /y "{temp_download_path}" "{exe_actual}" >nul 2>&1
 if errorlevel 1 goto retry_move
+
 start "" "{exe_actual}"
 del "%~f0" >nul 2>&1
 """
@@ -202,9 +212,16 @@ del "%~f0" >nul 2>&1
                 CREATE_NO_WINDOW = 0x08000000
                 flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
 
+            # Limpiar entorno heredado para que cmd y el nuevo exe no hereden variables internas de PyInstaller
+            env_limpio = os.environ.copy()
+            for k in list(env_limpio.keys()):
+                if k.startswith("_PYI") or k.startswith("_MEI"):
+                    env_limpio.pop(k, None)
+
             subprocess.Popen(
                 ["cmd.exe", "/c", cmd_script_path],
                 creationflags=flags,
+                env=env_limpio,
                 close_fds=True
             )
 
