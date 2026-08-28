@@ -1,0 +1,21 @@
+{
+    "correlativo": 2000,
+    "contexto": "",
+    "usar_ia": true,
+    "gemini_api_key": "",
+    "openai_api_key": "",
+    "download_dir": "",
+    "empresa_rut": "",
+    "rut_empresa_hn": "",
+    "sii_clave_hn": "",
+    "download_dir_hn": "",
+    "hn_usar_ia": true,
+    "hn_contexto": "",
+    "facturacion_empresa": "",
+    "facturacion_usuario": "",
+    "facturacion_password": "",
+    "download_dir_fcl": "",
+    "fcl_usar_ia": true,
+    "fcl_contexto": "",
+    "fcl_system_prompt": ""
+}

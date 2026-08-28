@@ -1,0 +1,54 @@
+name: Compilar Ejecutable Windows (.EXE)
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-exe:
+    name: Compilar SII_GestorFacturas.exe
+    runs-on: windows-latest
+
+    steps:
+      - name: Clonar Repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Instalar Dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compilar con PyInstaller
+        run: |
+          pyinstaller SII_GestorFacturas.spec --noconfirm --clean
+
+      - name: Subir Artefacto Ejecutable (.EXE)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SII_GestorFacturas-Windows
+          path: dist/SII_GestorFacturas.exe
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publicar Release en GitHub (si es una version/tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/SII_GestorFacturas.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
