@@ -32,6 +32,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Preparar Archivos de Configuracion
+        run: |
+          if (-not (Test-Path "config_app.json")) { Copy-Item "config_app.example.json" "config_app.json" }
+
       - name: Compilar con PyInstaller
         run: |
           pyinstaller SII_GestorFacturas.spec --noconfirm --clean

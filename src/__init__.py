@@ -2,4 +2,4 @@
 SII-RCV-DOWNLOADER: Gestor Tributario Unificado (SII & Facturación).
 """
 
-__version__ = "2.4.1"
+__version__ = "2.4.2"

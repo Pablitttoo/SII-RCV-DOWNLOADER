@@ -1,14 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import os
 from PyInstaller.utils.hooks import collect_all
 
 datas = [
     ('assets', 'assets'),
-    ('app_icon.ico', '.'),
-    ('app_icon.png', '.'),
     ('empresas.json', '.'),
-    ('config_app.json', '.')
 ]
+
+for extra_file in ['config_app.json', 'config_app.example.json', 'app_icon.ico', 'app_icon.png']:
+    if os.path.exists(extra_file):
+        datas.append((extra_file, '.'))
 binaries = []
 hiddenimports = [
     'dotenv',
