@@ -821,18 +821,50 @@ class AppSII(tk.Tk):
         self.cb_empresa.pack(fill="x", pady=(0, 8))
         self.cb_empresa.bind("<<ComboboxSelected>>", self.al_cambiar_empresa)
 
-        # Periodo (Mes y Año en una fila)
+        # Periodo (Mes, Año y Botones de Salto Rápido ◀ ▶)
         tk.Label(self.params_frame, text="Periodo:", font=("Segoe UI", 8, "bold"), bg=C_SIDEBAR, fg=C_TEXT_MUTED).pack(anchor="w", pady=(0, 3))
         row_per = tk.Frame(self.params_frame, bg=C_SIDEBAR)
         row_per.pack(fill="x", pady=(0, 8))
 
+        btn_mes_prev = tk.Button(
+            row_per,
+            text="◀",
+            font=("Segoe UI", 8, "bold"),
+            bg=C_SURFACE_ALT,
+            fg=C_TEXT_MAIN,
+            activebackground="#223150",
+            activeforeground="#ffffff",
+            relief="flat",
+            padx=5,
+            pady=1,
+            cursor="hand2",
+            command=self.mes_anterior_sidebar
+        )
+        btn_mes_prev.pack(side="left", padx=(0, 3))
+
         meses_disp = [m for m in script.NOMBRES_MESES if m]
-        self.cb_mes = ttk.Combobox(row_per, textvariable=self.sel_mes, values=meses_disp, width=13, state="readonly")
-        self.cb_mes.pack(side="left", padx=(0, 6))
+        self.cb_mes = ttk.Combobox(row_per, textvariable=self.sel_mes, values=meses_disp, width=10, state="readonly")
+        self.cb_mes.pack(side="left", padx=(0, 3))
         self.cb_mes.bind("<<ComboboxSelected>>", lambda e: self.on_cambio_periodo_sidebar())
 
+        btn_mes_next = tk.Button(
+            row_per,
+            text="▶",
+            font=("Segoe UI", 8, "bold"),
+            bg=C_SURFACE_ALT,
+            fg=C_TEXT_MAIN,
+            activebackground="#223150",
+            activeforeground="#ffffff",
+            relief="flat",
+            padx=5,
+            pady=1,
+            cursor="hand2",
+            command=self.mes_siguiente_sidebar
+        )
+        btn_mes_next.pack(side="left", padx=(0, 3))
+
         anios_disp = [str(a) for a in range(datetime.now().year, datetime.now().year - 4, -1)]
-        self.cb_anio = ttk.Combobox(row_per, textvariable=self.sel_anio, values=anios_disp, width=7, state="readonly")
+        self.cb_anio = ttk.Combobox(row_per, textvariable=self.sel_anio, values=anios_disp, width=6, state="readonly")
         self.cb_anio.pack(side="left")
         self.cb_anio.bind("<<ComboboxSelected>>", lambda e: self.on_cambio_periodo_sidebar())
 
@@ -1023,6 +1055,34 @@ class AppSII(tk.Tk):
             self.btn_toggle_opciones.config(text="⚙️  Opciones y Filtros  ▲", fg=C_PRIMARY_HOV)
             self.opciones_avanzadas_visibles = True
 
+    def mes_anterior_sidebar(self):
+        mes_nom = self.sel_mes.get()
+        meses = [m for m in script.NOMBRES_MESES if m]
+        mes_idx = meses.index(mes_nom) if mes_nom in meses else datetime.now().month - 1
+        anio_val = int(self.sel_anio.get())
+        if mes_idx == 0:
+            mes_idx = 11
+            anio_val -= 1
+        else:
+            mes_idx -= 1
+        self.sel_mes.set(meses[mes_idx])
+        self.sel_anio.set(str(anio_val))
+        self.on_cambio_periodo_sidebar()
+
+    def mes_siguiente_sidebar(self):
+        mes_nom = self.sel_mes.get()
+        meses = [m for m in script.NOMBRES_MESES if m]
+        mes_idx = meses.index(mes_nom) if mes_nom in meses else datetime.now().month - 1
+        anio_val = int(self.sel_anio.get())
+        if mes_idx == 11:
+            mes_idx = 0
+            anio_val += 1
+        else:
+            mes_idx += 1
+        self.sel_mes.set(meses[mes_idx])
+        self.sel_anio.set(str(anio_val))
+        self.on_cambio_periodo_sidebar()
+
     def on_cambio_periodo_sidebar(self):
         m = self.sel_mes.get()
         a = self.sel_anio.get()
@@ -1150,19 +1210,35 @@ class AppSII(tk.Tk):
         tb = tk.Frame(parent, bg=C_SURFACE, padx=10, pady=6, relief="flat", highlightbackground=C_BORDER, highlightthickness=1)
         tb.pack(fill="x", pady=(0, 6))
 
-        tk.Label(tb, text="🔎", font=("Segoe UI", 9), bg=C_SURFACE, fg=C_TEXT_MUTED).pack(side="left", padx=(0, 4))
+        # Caja de búsqueda integrada con botón Limpiar
+        box_search = tk.Frame(tb, bg=C_INPUT, highlightbackground=C_BORDER, highlightthickness=1)
+        box_search.pack(side="left", padx=(0, 10))
+        tk.Label(box_search, text="🔎", font=("Segoe UI", 9), bg=C_INPUT, fg=C_TEXT_MUTED).pack(side="left", padx=(5, 2))
         self.entry_busqueda = tk.Entry(
-            tb,
+            box_search,
             textvariable=self.busqueda_texto,
             font=("Segoe UI", 9),
             bg=C_INPUT,
             fg=C_TEXT_MAIN,
             insertbackground=C_TEXT_MAIN,
             relief="flat",
-            width=26
+            width=22
         )
-        self.entry_busqueda.pack(side="left", padx=(0, 10))
+        self.entry_busqueda.pack(side="left", ipady=2)
         self.entry_busqueda.bind("<KeyRelease>", lambda e: self.filtrar_tabla())
+        tk.Button(
+            box_search,
+            text="✖",
+            font=("Segoe UI", 7, "bold"),
+            bg=C_INPUT,
+            fg=C_TEXT_MUTED,
+            activebackground=C_INPUT,
+            activeforeground=C_DANGER,
+            relief="flat",
+            padx=4,
+            cursor="hand2",
+            command=lambda: [self.busqueda_texto.set(""), self.filtrar_tabla()]
+        ).pack(side="right", padx=(0, 2))
 
         tk.Label(tb, text="Filtro:", font=("Segoe UI", 8, "bold"), bg=C_SURFACE, fg=C_TEXT_MUTED).pack(side="left", padx=(0, 4))
         self.cb_filtro_est = ttk.Combobox(
@@ -1254,6 +1330,10 @@ class AppSII(tk.Tk):
 
         self.tree.tag_configure("odd", background="#0b1120")
         self.tree.tag_configure("even", background="#0e1628")
+        self.tree.tag_configure("tipo_33", foreground="#93c5fd")
+        self.tree.tag_configure("tipo_34", foreground="#86efac")
+        self.tree.tag_configure("tipo_61", foreground="#fda4af")
+        self.tree.tag_configure("tipo_56", foreground="#fde047")
         self.tree.tag_configure("pdf_listo", foreground="#34d399")
         self.tree.tag_configure("reclamado", foreground="#f87171")
         self.tree.tag_configure("pendiente", foreground="#fbbf24")
@@ -1368,19 +1448,35 @@ class AppSII(tk.Tk):
         tb = tk.Frame(parent, bg=C_SURFACE, padx=10, pady=6, relief="flat", highlightbackground=C_BORDER, highlightthickness=1)
         tb.pack(fill="x", pady=(0, 6))
 
-        tk.Label(tb, text="🔎", font=("Segoe UI", 9), bg=C_SURFACE, fg=C_TEXT_MUTED).pack(side="left", padx=(0, 4))
+        # Caja de búsqueda integrada con botón Limpiar
+        box_search_hn = tk.Frame(tb, bg=C_INPUT, highlightbackground=C_BORDER, highlightthickness=1)
+        box_search_hn.pack(side="left", padx=(0, 10))
+        tk.Label(box_search_hn, text="🔎", font=("Segoe UI", 9), bg=C_INPUT, fg=C_TEXT_MUTED).pack(side="left", padx=(5, 2))
         self.entry_busqueda_hn = tk.Entry(
-            tb,
+            box_search_hn,
             textvariable=self.hn_busqueda_texto,
             font=("Segoe UI", 9),
             bg=C_INPUT,
             fg=C_TEXT_MAIN,
             insertbackground=C_TEXT_MAIN,
             relief="flat",
-            width=28
+            width=24
         )
-        self.entry_busqueda_hn.pack(side="left", padx=(0, 10))
+        self.entry_busqueda_hn.pack(side="left", ipady=2)
         self.entry_busqueda_hn.bind("<KeyRelease>", lambda e: self.filtrar_tabla_honorarios())
+        tk.Button(
+            box_search_hn,
+            text="✖",
+            font=("Segoe UI", 7, "bold"),
+            bg=C_INPUT,
+            fg=C_TEXT_MUTED,
+            activebackground=C_INPUT,
+            activeforeground=C_DANGER,
+            relief="flat",
+            padx=4,
+            cursor="hand2",
+            command=lambda: [self.hn_busqueda_texto.set(""), self.filtrar_tabla_honorarios()]
+        ).pack(side="right", padx=(0, 2))
 
         btn_exp = tk.Button(
             tb,
@@ -1446,6 +1542,8 @@ class AppSII(tk.Tk):
 
         self.tree_hn.tag_configure("odd", background="#0b1120")
         self.tree_hn.tag_configure("even", background="#0e1628")
+        self.tree_hn.tag_configure("bhe_activa", foreground="#86efac")
+        self.tree_hn.tag_configure("bhe_anulada", foreground="#fda4af")
         self.tree_hn.tag_configure("pdf_listo", foreground="#34d399")
 
         self.tree_hn.bind("<Double-1>", self.on_doble_clic_fila_hn)
@@ -1556,19 +1654,35 @@ class AppSII(tk.Tk):
         tb = tk.Frame(parent, bg=C_SURFACE, padx=10, pady=6, relief="flat", highlightbackground=C_BORDER, highlightthickness=1)
         tb.pack(fill="x", pady=(0, 6))
 
-        tk.Label(tb, text="🔎", font=("Segoe UI", 9), bg=C_SURFACE, fg=C_TEXT_MUTED).pack(side="left", padx=(0, 4))
+        # Caja de búsqueda integrada con botón Limpiar
+        box_search_fcl = tk.Frame(tb, bg=C_INPUT, highlightbackground=C_BORDER, highlightthickness=1)
+        box_search_fcl.pack(side="left", padx=(0, 10))
+        tk.Label(box_search_fcl, text="🔎", font=("Segoe UI", 9), bg=C_INPUT, fg=C_TEXT_MUTED).pack(side="left", padx=(5, 2))
         self.entry_busqueda_fcl = tk.Entry(
-            tb,
+            box_search_fcl,
             textvariable=self.fcl_busqueda_texto,
             font=("Segoe UI", 9),
             bg=C_INPUT,
             fg=C_TEXT_MAIN,
             insertbackground=C_TEXT_MAIN,
             relief="flat",
-            width=28
+            width=24
         )
-        self.entry_busqueda_fcl.pack(side="left", padx=(0, 10))
+        self.entry_busqueda_fcl.pack(side="left", ipady=2)
         self.entry_busqueda_fcl.bind("<KeyRelease>", lambda e: self.filtrar_tabla_fcl())
+        tk.Button(
+            box_search_fcl,
+            text="✖",
+            font=("Segoe UI", 7, "bold"),
+            bg=C_INPUT,
+            fg=C_TEXT_MUTED,
+            activebackground=C_INPUT,
+            activeforeground=C_DANGER,
+            relief="flat",
+            padx=4,
+            cursor="hand2",
+            command=lambda: [self.fcl_busqueda_texto.set(""), self.filtrar_tabla_fcl()]
+        ).pack(side="right", padx=(0, 2))
 
         tk.Label(tb, text="Tipo Doc:", font=("Segoe UI", 8, "bold"), bg=C_SURFACE, fg=C_TEXT_MUTED).pack(side="left", padx=(0, 4))
         self.cb_filtro_fcl = ttk.Combobox(
@@ -1647,6 +1761,10 @@ class AppSII(tk.Tk):
 
         self.tree_fcl.tag_configure("odd", background="#0b1120")
         self.tree_fcl.tag_configure("even", background="#0e1628")
+        self.tree_fcl.tag_configure("tipo_33", foreground="#93c5fd")
+        self.tree_fcl.tag_configure("tipo_34", foreground="#86efac")
+        self.tree_fcl.tag_configure("tipo_61", foreground="#fda4af")
+        self.tree_fcl.tag_configure("tipo_56", foreground="#fde047")
         self.tree_fcl.tag_configure("pdf_listo", foreground="#34d399")
 
         self.tree_fcl.bind("<Double-1>", self.on_doble_clic_fila_fcl)
@@ -2114,6 +2232,9 @@ class AppSII(tk.Tk):
         for i, d in enumerate(self.documentos_visibles):
             tag_strip = "even" if i % 2 == 0 else "odd"
             tags = [tag_strip]
+            tipo_cod = str(d.get("tipo_doc_codigo", d.get("tipo_doc", ""))).strip()
+            if tipo_cod in ("33", "34", "61", "56"):
+                tags.append(f"tipo_{tipo_cod}")
             pdf_str = "🟢" if d.get("pdf_ruta") else "📥"
             if d.get("pdf_ruta"):
                 tags.append("pdf_listo")
@@ -2612,6 +2733,10 @@ class AppSII(tk.Tk):
         for i, b in enumerate(self.boletas_honorarios_visibles):
             tag_strip = "even" if i % 2 == 0 else "odd"
             tags = [tag_strip]
+            if "anulad" in str(b.get("estado", "")).lower() or "anulad" in str(b.get("glosa", "")).lower():
+                tags.append("bhe_anulada")
+            else:
+                tags.append("bhe_activa")
             pdf_str = "🟢" if b.get("pdf_ruta") else "📥"
             if b.get("pdf_ruta"):
                 tags.append("pdf_listo")
@@ -3127,6 +3252,19 @@ class AppSII(tk.Tk):
         for i, d in enumerate(self.fcl_documentos_visibles):
             tag_strip = "even" if i % 2 == 0 else "odd"
             tags = [tag_strip]
+            tipo_cod = str(d.get("tipo_doc", "")).strip()
+            if tipo_cod in ("33", "34", "61", "56"):
+                tags.append(f"tipo_{tipo_cod}")
+            else:
+                tipo_nom = str(d.get("tipo_doc_nombre", "")).lower()
+                if "exenta" in tipo_nom:
+                    tags.append("tipo_34")
+                elif "crédito" in tipo_nom or "credito" in tipo_nom:
+                    tags.append("tipo_61")
+                elif "débito" in tipo_nom or "debito" in tipo_nom:
+                    tags.append("tipo_56")
+                elif "factura" in tipo_nom:
+                    tags.append("tipo_33")
             pdf_str = "🟢" if d.get("pdf_ruta") else "📥"
             if d.get("pdf_ruta"):
                 tags.append("pdf_listo")
