@@ -179,22 +179,35 @@ def aplicar_actualizacion_windows(url_descarga, ventana_padre=None, log_cb=print
             if log_cb:
                 log_cb("✓ Descarga completada. Aplicando actualización y reiniciando...")
 
-            # Preparar comando PowerShell para reemplazo atómico y reinicio
-            pid_actual = os.getpid()
-            ps_script = (
-                f"$pidApp = {pid_actual}; "
-                f"$tempExe = '{temp_download_path}'; "
-                f"$destExe = '{exe_actual}'; "
-                f"Start-Sleep -Milliseconds 800; "
-                f"while (Get-Process -Id $pidApp -ErrorAction SilentlyContinue) {{ Start-Sleep -Milliseconds 300 }}; "
-                f"Move-Item -Path $tempExe -Destination $destExe -Force; "
-                f"Start-Process -FilePath $destExe; "
-            )
+            # Crear script batch autónomo e independiente en la carpeta temporal de Windows
+            cmd_script_path = os.path.join(tempfile.gettempdir(), f"sii_update_{os.getpid()}.cmd")
+            cmd_content = f"""@echo off
+chcp 65001 >nul
+timeout /t 1 /nobreak >nul
+:retry_move
+move /y "{temp_download_path}" "{exe_actual}" >nul 2>&1
+if errorlevel 1 (
+    timeout /t 1 /nobreak >nul
+    goto retry_move
+)
+start "" "{exe_actual}"
+del "%~f0" >nul 2>&1
+"""
+            with open(cmd_script_path, "w", encoding="latin-1") as f_cmd:
+                f_cmd.write(cmd_content)
 
-            # Lanzar PowerShell desacoplado en segundo plano
+            # Flags de desacoplamiento total de proceso en Windows (sin herencia de proceso padre)
+            flags = 0
+            if sys.platform == "win32":
+                DETACHED_PROCESS = 0x00000008
+                CREATE_NEW_PROCESS_GROUP = 0x00000200
+                CREATE_NO_WINDOW = 0x08000000
+                flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
+
             subprocess.Popen(
-                ["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_script],
-                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+                ["cmd.exe", "/c", cmd_script_path],
+                creationflags=flags,
+                close_fds=True
             )
 
             # Cerrar la aplicación actual limpiamente
