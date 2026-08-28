@@ -27,6 +27,7 @@ from ..utils import (
     EMPRESAS_FILE,
     leer_credenciales_env,
     guardar_credenciales_env,
+    VERSION_LOCAL,
 )
 
 DIRECTORIO_ACTUAL = obtener_ruta_base()
@@ -151,7 +152,7 @@ class AppSII(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        self.title("Gestor Tributario • SII & Facturación")
+        self.title(f"Gestor Tributario • SII & Facturación v{VERSION_LOCAL}")
         self.configure(bg=C_CANVAS)
         self.minsize(1180, 720)
 
@@ -676,11 +677,26 @@ class AppSII(tk.Tk):
             except Exception:
                 pass
 
+        brand_row = tk.Frame(brand_frame, bg=C_SIDEBAR)
+        brand_row.pack(fill="x", anchor="w")
+
         if self._logo_img:
-            lbl_title = tk.Label(brand_frame, text=" GESTOR SII", image=self._logo_img, compound="left", font=("Segoe UI", 12, "bold"), bg=C_SIDEBAR, fg=C_TEXT_MAIN)
+            lbl_title = tk.Label(brand_row, text=" GESTOR SII", image=self._logo_img, compound="left", font=("Segoe UI", 12, "bold"), bg=C_SIDEBAR, fg=C_TEXT_MAIN)
         else:
-            lbl_title = tk.Label(brand_frame, text="⚡ GESTOR SII", font=("Segoe UI", 12, "bold"), bg=C_SIDEBAR, fg=C_TEXT_MAIN)
-        lbl_title.pack(anchor="w")
+            lbl_title = tk.Label(brand_row, text="⚡ GESTOR SII", font=("Segoe UI", 12, "bold"), bg=C_SIDEBAR, fg=C_TEXT_MAIN)
+        lbl_title.pack(side="left")
+
+        lbl_ver_badge = tk.Label(
+            brand_row,
+            text=f"v{VERSION_LOCAL}",
+            font=("Segoe UI", 7, "bold"),
+            bg="#1e2442",
+            fg="#818cf8",
+            padx=6,
+            pady=1,
+            relief="flat"
+        )
+        lbl_ver_badge.pack(side="left", padx=(6, 0))
 
         lbl_sub = tk.Label(brand_frame, text="Facturas, Honorarios & DTEs", font=("Segoe UI", 8), bg=C_SIDEBAR, fg=C_TEXT_MUTED)
         lbl_sub.pack(anchor="w", padx=(28 if self._logo_img else 2, 0))
@@ -1691,6 +1707,16 @@ class AppSII(tk.Tk):
 
         self.lbl_status_global = tk.Label(bar, text="●  Listo • Gestor Unificado iniciado.", font=("Segoe UI", 9), bg=C_SURFACE, fg=C_SUCCESS)
         self.lbl_status_global.pack(side="left")
+
+        lbl_ver_status = tk.Label(
+            bar,
+            text=f"v{VERSION_LOCAL}",
+            font=("Segoe UI", 8, "bold"),
+            bg=C_SURFACE,
+            fg=C_TEXT_DIM,
+            padx=8
+        )
+        lbl_ver_status.pack(side="right")
 
         self.btn_toggle_log = tk.Button(
             bar,
