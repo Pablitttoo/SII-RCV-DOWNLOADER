@@ -1118,11 +1118,32 @@ class AppSII(tk.Tk):
         kpi_bar = tk.Frame(parent, bg=C_CANVAS)
         kpi_bar.pack(fill="x", pady=(0, 8))
 
-        self.kpi_fac = self.crear_kpi_card_compacta(kpi_bar, "DOCS (33)", "0", C_INFO)
-        self.kpi_exe = self.crear_kpi_card_compacta(kpi_bar, "EXENTAS (34)", "0", C_SUCCESS)
-        self.kpi_pen = self.crear_kpi_card_compacta(kpi_bar, "PENDIENTES", "0", C_WARNING)
+        def _filtrar_kpi_fac():
+            self.filtro_estado.set("Registro")
+            self.filtrar_tabla()
+            self.log("Filtro aplicado: Documentos en Registro.")
+
+        def _filtrar_kpi_exe():
+            self.busqueda_texto.set("34")
+            self.filtrar_tabla()
+            self.log("Filtro aplicado: Facturas Exentas (Tipo 34).")
+
+        def _filtrar_kpi_pen():
+            self.filtro_estado.set("Pendientes")
+            self.filtrar_tabla()
+            self.log("Filtro aplicado: Facturas Pendientes.")
+
+        def _filtrar_kpi_tot():
+            self.busqueda_texto.set("")
+            self.filtro_estado.set("Todos")
+            self.filtrar_tabla()
+            self.log("Filtro restablecido: Todos los documentos.")
+
+        self.kpi_fac = self.crear_kpi_card_compacta(kpi_bar, "DOCS (33)", "0", C_INFO, click_cb=_filtrar_kpi_fac)
+        self.kpi_exe = self.crear_kpi_card_compacta(kpi_bar, "EXENTAS (34)", "0", C_SUCCESS, click_cb=_filtrar_kpi_exe)
+        self.kpi_pen = self.crear_kpi_card_compacta(kpi_bar, "PENDIENTES", "0", C_WARNING, click_cb=_filtrar_kpi_pen)
         self.kpi_iva = self.crear_kpi_card_compacta(kpi_bar, "IVA RECUP.", "$0", C_DANGER)
-        self.kpi_tot = self.crear_kpi_card_compacta(kpi_bar, "TOTAL SUMADO", "$0", C_PURPLE)
+        self.kpi_tot = self.crear_kpi_card_compacta(kpi_bar, "TOTAL SUMADO", "$0", C_PURPLE, click_cb=_filtrar_kpi_tot)
         self.kpi_pdf = self.crear_kpi_card_compacta(kpi_bar, "PDFS GUARDADOS", "0", C_TEAL, click_cb=self.abrir_carpeta_descargas)
 
         # TOOLBAR DE TABLA
@@ -1180,6 +1201,20 @@ class AppSII(tk.Tk):
             command=self.exportar_rcv_csv
         )
         btn_exp.pack(side="right")
+
+        btn_copy = tk.Button(
+            tb,
+            text="📋 Copiar a Excel",
+            font=("Segoe UI", 8, "bold"),
+            bg=C_SURFACE_ALT,
+            fg=C_SUCCESS,
+            relief="flat",
+            padx=8,
+            pady=2,
+            cursor="hand2",
+            command=self.copiar_rcv_excel
+        )
+        btn_copy.pack(side="right", padx=(0, 6))
 
         # TABLA DE FACTURAS (TREEVIEW)
         tree_frame = tk.Frame(parent, bg=C_CANVAS)
@@ -1360,6 +1395,20 @@ class AppSII(tk.Tk):
             command=self.exportar_honorarios_csv
         )
         btn_exp.pack(side="right")
+
+        btn_copy = tk.Button(
+            tb,
+            text="📋 Copiar a Excel",
+            font=("Segoe UI", 8, "bold"),
+            bg=C_SURFACE_ALT,
+            fg=C_SUCCESS,
+            relief="flat",
+            padx=8,
+            pady=2,
+            cursor="hand2",
+            command=self.copiar_honorarios_excel
+        )
+        btn_copy.pack(side="right", padx=(0, 6))
 
         # TABLA DE HONORARIOS
         tree_frame = tk.Frame(parent, bg=C_CANVAS)
@@ -1545,6 +1594,20 @@ class AppSII(tk.Tk):
             command=lambda: self.exportar_fcl_seccion_csv("todos")
         )
         btn_exp.pack(side="right")
+
+        btn_copy = tk.Button(
+            tb,
+            text="📋 Copiar a Excel",
+            font=("Segoe UI", 8, "bold"),
+            bg=C_SURFACE_ALT,
+            fg=C_SUCCESS,
+            relief="flat",
+            padx=8,
+            pady=2,
+            cursor="hand2",
+            command=self.copiar_fcl_excel
+        )
+        btn_copy.pack(side="right", padx=(0, 6))
 
         # TABLA DE FACTURACIÓN.CL
         tree_frame = tk.Frame(parent, bg=C_CANVAS)
@@ -2339,6 +2402,38 @@ class AppSII(tk.Tk):
         except Exception as e:
             messagebox.showerror("Error al Exportar", f"No se pudo guardar el archivo CSV:\n{e}", parent=self)
 
+    def copiar_rcv_excel(self):
+        docs = self.documentos_visibles if self.documentos_visibles else self.documentos
+        if not docs:
+            messagebox.showinfo("Copiar a Excel", "No hay facturas visibles en la tabla para copiar.", parent=self)
+            return
+        try:
+            lineas = []
+            lineas.append("\t".join(["Folio", "Tipo Documento", "Código Tipo", "Razón Social Proveedor", "RUT Emisor", "Fecha Docto", "Monto Neto", "Monto Exento", "Monto IVA", "Monto Total", "Estado RCV", "PDF Guardado"]))
+            for d in docs:
+                lineas.append("\t".join([
+                    str(d.get("folio", "")),
+                    str(d.get("tipo_doc_nombre", "")),
+                    str(d.get("tipo_doc_codigo", "")),
+                    str(d.get("razon_social", "")),
+                    str(d.get("rut_emisor", "")),
+                    str(d.get("fecha_docto", "")),
+                    str(d.get("monto_neto", 0)),
+                    str(d.get("monto_exento", 0)),
+                    str(d.get("monto_iva", 0)),
+                    str(d.get("monto_total", 0)),
+                    str(d.get("estado_rcv", "")),
+                    "SÍ" if d.get("pdf_ruta") else "NO"
+                ]))
+            tsv_data = "\n".join(lineas)
+            self.clipboard_clear()
+            self.clipboard_append(tsv_data)
+            self.update()
+            self.log(f"✓ {len(docs)} facturas copiadas al portapapeles. ¡Pégalas en Excel con Ctrl + V!")
+            messagebox.showinfo("Copiado al Portapapeles", f"Se han copiado {len(docs)} facturas al portapapeles con éxito.\n\nPuedes pegarlas directamente en Excel con Ctrl + V.", parent=self)
+        except Exception as e:
+            messagebox.showerror("Error al Copiar", f"No se pudieron copiar los datos:\n{e}", parent=self)
+
     # ==========================================================
     # MÓDULO 2 (BOLETAS DE HONORARIOS BHE) - OPERATIVO
     # ==========================================================
@@ -2823,6 +2918,35 @@ class AppSII(tk.Tk):
         except Exception as e:
             messagebox.showerror("Error al Exportar", f"No se pudo guardar el archivo CSV:\n{e}", parent=self)
 
+    def copiar_honorarios_excel(self):
+        bhes = self.boletas_honorarios_visibles if self.boletas_honorarios_visibles else self.boletas_honorarios
+        if not bhes:
+            messagebox.showinfo("Copiar a Excel", "No hay boletas de honorarios visibles para copiar.", parent=self)
+            return
+        try:
+            lineas = []
+            lineas.append("\t".join(["Folio", "Fecha Emisión", "Emisor / Prestador", "RUT Emisor", "Monto Bruto", "Retención", "Monto Líquido", "Glosa de Servicios", "PDF Guardado"]))
+            for b in bhes:
+                lineas.append("\t".join([
+                    str(b.get("folio", "")),
+                    str(b.get("fecha", "")),
+                    str(b.get("emisor", "")),
+                    str(b.get("rut", "")),
+                    str(b.get("monto_bruto", 0)),
+                    str(b.get("retencion", 0)),
+                    str(b.get("monto_liquido", 0)),
+                    str(b.get("glosa", "")),
+                    "SÍ" if b.get("pdf_ruta") else "NO"
+                ]))
+            tsv_data = "\n".join(lineas)
+            self.clipboard_clear()
+            self.clipboard_append(tsv_data)
+            self.update()
+            self.log(f"✓ {len(bhes)} boletas de honorarios copiadas al portapapeles. ¡Pégalas en Excel con Ctrl + V!")
+            messagebox.showinfo("Copiado al Portapapeles", f"Se han copiado {len(bhes)} boletas al portapapeles con éxito.\n\nPuedes pegarlas directamente en Excel con Ctrl + V.", parent=self)
+        except Exception as e:
+            messagebox.showerror("Error al Copiar", f"No se pudieron copiar los datos:\n{e}", parent=self)
+
     # ==========================================================
     # MÓDULO 3 (FACTURACIÓN.CL - DESIS) - OPERATIVO
     # ==========================================================
@@ -3263,6 +3387,38 @@ class AppSII(tk.Tk):
             messagebox.showinfo("Exportación Exitosa", f"Archivo guardado correctamente en:\n{ruta}", parent=self)
         except Exception as e:
             messagebox.showerror("Error al Exportar", f"No se pudo guardar el archivo CSV:\n{e}", parent=self)
+
+    def copiar_fcl_excel(self):
+        docs = self.fcl_documentos_visibles if self.fcl_documentos_visibles else self.fcl_documentos
+        if not docs:
+            messagebox.showinfo("Copiar a Excel", "No hay DTEs visibles para copiar.", parent=self)
+            return
+        try:
+            lineas = []
+            lineas.append("\t".join(["Folio", "Tipo Documento", "Código Tipo", "Proveedor / Razón Social", "RUT Proveedor", "Fecha Docto", "Monto Neto", "Monto IVA", "Monto Total", "Fecha Recepción SII", "Estado Acuse", "PDF Guardado"]))
+            for d in docs:
+                lineas.append("\t".join([
+                    str(d.get("folio", "")),
+                    str(d.get("tipo_doc_nombre", "")),
+                    str(d.get("tipo_doc", "")),
+                    str(d.get("razon_social", "")),
+                    str(d.get("rut_emisor", "")),
+                    str(d.get("fecha_docto", "")),
+                    str(d.get("monto_neto", 0)),
+                    str(d.get("monto_iva", 0)),
+                    str(d.get("monto_total", 0)),
+                    str(d.get("fecha_recepcion", "")),
+                    str(d.get("estado_acuse", "")),
+                    "SÍ" if d.get("pdf_ruta") else "NO"
+                ]))
+            tsv_data = "\n".join(lineas)
+            self.clipboard_clear()
+            self.clipboard_append(tsv_data)
+            self.update()
+            self.log(f"✓ {len(docs)} DTEs de Facturación.cl copiados al portapapeles. ¡Pégalas en Excel con Ctrl + V!")
+            messagebox.showinfo("Copiado al Portapapeles", f"Se han copiado {len(docs)} DTEs al portapapeles con éxito.\n\nPuedes pegarlos directamente en Excel con Ctrl + V.", parent=self)
+        except Exception as e:
+            messagebox.showerror("Error al Copiar", f"No se pudieron copiar los datos:\n{e}", parent=self)
 
     # ==========================================================
     # MODAL DE CONFIGURACIÓN DE IA & API KEYS
