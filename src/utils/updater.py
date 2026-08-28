@@ -183,13 +183,11 @@ def aplicar_actualizacion_windows(url_descarga, ventana_padre=None, log_cb=print
             cmd_script_path = os.path.join(tempfile.gettempdir(), f"sii_update_{os.getpid()}.cmd")
             cmd_content = f"""@echo off
 chcp 65001 >nul
-timeout /t 1 /nobreak >nul
+cd /d "{carpeta_exe}"
 :retry_move
+timeout /t 1 /nobreak >nul
 move /y "{temp_download_path}" "{exe_actual}" >nul 2>&1
-if errorlevel 1 (
-    timeout /t 1 /nobreak >nul
-    goto retry_move
-)
+if errorlevel 1 goto retry_move
 start "" "{exe_actual}"
 del "%~f0" >nul 2>&1
 """
