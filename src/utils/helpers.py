@@ -29,17 +29,48 @@ def obtener_ruta_base():
     return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
+def obtener_ruta_appdata(nombre_app="GestorSII"):
+    """
+    Retorna la ruta segura de almacenamiento de datos del usuario en AppData / Application Support / .local/share.
+    Crea el directorio si no existe.
+    """
+    if sys.platform == "win32":
+        base = os.getenv("APPDATA") or os.path.join(os.path.expanduser("~"), "AppData", "Roaming")
+    elif sys.platform == "darwin":
+        base = os.path.join(os.path.expanduser("~"), "Library", "Application Support")
+    else:
+        base = os.getenv("XDG_DATA_HOME") or os.path.join(os.path.expanduser("~"), ".local", "share")
+
+    ruta_app = os.path.join(base, nombre_app)
+    try:
+        os.makedirs(ruta_app, exist_ok=True)
+    except Exception:
+        pass
+    return ruta_app
+
+
 def cargar_variables_entorno():
-    """Busca y carga el archivo .env desde la raíz del proyecto."""
+    """Busca y carga el archivo .env desde AppData (con migración transparente si existía en la raíz)."""
     try:
         from dotenv import load_dotenv
-        base = obtener_ruta_base()
-        ruta_env = os.path.join(base, ".env")
-        if os.path.exists(ruta_env):
-            load_dotenv(ruta_env, override=True)
+        import shutil
+        appdata_dir = obtener_ruta_appdata()
+        env_appdata = os.path.join(appdata_dir, ".env")
+
+        # 1. Si existe en AppData, cargar prioritariamente
+        if os.path.exists(env_appdata):
+            load_dotenv(env_appdata, override=True)
             return True
-        if os.path.exists(".env"):
-            load_dotenv(".env", override=True)
+
+        # 2. Si no existe en AppData pero existe en la raíz, migrar a AppData y cargar
+        base = obtener_ruta_base()
+        env_local = os.path.join(base, ".env")
+        if os.path.exists(env_local):
+            try:
+                shutil.copy2(env_local, env_appdata)
+            except Exception:
+                pass
+            load_dotenv(env_appdata if os.path.exists(env_appdata) else env_local, override=True)
             return True
     except Exception:
         pass

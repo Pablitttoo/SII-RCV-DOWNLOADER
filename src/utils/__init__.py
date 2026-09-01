@@ -6,6 +6,7 @@ from .helpers import (
     abrir_archivo_o_carpeta,
     parse_fecha_dt,
     obtener_ruta_base,
+    obtener_ruta_appdata,
     obtener_ruta_recurso,
     cargar_variables_entorno,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "abrir_archivo_o_carpeta",
     "parse_fecha_dt",
     "obtener_ruta_base",
+    "obtener_ruta_appdata",
     "obtener_ruta_recurso",
     "cargar_variables_entorno",
     "CONFIG_FILE",

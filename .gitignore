@@ -1,17 +1,27 @@
 # Entorno y credenciales sensibles
 .env
+.env*
 *.env
 config_app.json
+config_app.*.json
+empresas.json
+empresas.*.json
+*.key
+*.db
+*.log
 
 # Carpetas de compilación y temporales
 build/
 dist/
 __pycache__/
 *.pyc
+*.pyo
 
 # Ejecutables grandes
 *.exe
 
-# Carpetas de descargas temporales
+# Carpetas de descargas y pruebas
 test_facs/
 test_facs_personalizada/
+downloads/
+descargas/

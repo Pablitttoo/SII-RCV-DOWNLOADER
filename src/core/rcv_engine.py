@@ -203,7 +203,7 @@ def cerrar_sesion_sii(driver, log_cb=print):
     """Cierra limpiamente la sesión en el servidor del SII."""
     try:
         driver.get("https://zeusr.sii.cl/cgi_AUT2000/autLogout.cgi")
-        time.sleep(2.5)
+        time.sleep(1.5)
     except Exception:
         pass
 
@@ -790,6 +790,12 @@ class GestorSesionSII:
 
     def cerrar(self, log_cb=print):
         with self.lock:
+            if self.session_req:
+                try:
+                    self.session_req.get("https://zeusr.sii.cl/cgi_AUT2000/autLogout.cgi", timeout=4)
+                except Exception:
+                    pass
+                self.session_req = None
             if self.driver:
                 log_cb("Cerrando sesión en el servidor del SII...")
                 try:
@@ -802,7 +808,6 @@ class GestorSesionSII:
                     pass
                 self.driver = None
                 self.wait = None
-                self.session_req = None
                 self.mapa_mipe_por_periodo.clear()
                 log_cb("Sesión cerrada limpiamente.")
 

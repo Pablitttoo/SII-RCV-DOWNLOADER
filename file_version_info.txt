@@ -1,0 +1,37 @@
+# UTF-8
+#
+# Archivo de recursos y metadatos de versión de Windows para PyInstaller
+#
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(3, 0, 0, 0),
+    prodvers=(3, 0, 0, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo(
+      [
+        StringTable(
+          '040904b0',
+          [
+            StringStruct('CompanyName', 'Gestor Tributario SII'),
+            StringStruct('FileDescription', 'Gestor Tributario y Descargador de Documentos SII & Facturación.cl'),
+            StringStruct('FileVersion', '3.0.0.0'),
+            StringStruct('InternalName', 'SII_GestorFacturas'),
+            StringStruct('LegalCopyright', 'Copyright © 2026. Todos los derechos reservados.'),
+            StringStruct('OriginalFilename', 'SII_GestorFacturas.exe'),
+            StringStruct('ProductName', 'Gestor Tributario SII'),
+            StringStruct('ProductVersion', '3.0.0.0'),
+            StringStruct('Comments', 'Automatización de descargas y procesamiento de facturas y boletas tributarias chilenas')
+          ]
+        )
+      ]
+    ),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)

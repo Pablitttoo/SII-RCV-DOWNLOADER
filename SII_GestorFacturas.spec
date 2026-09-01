@@ -5,10 +5,9 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = [
     ('assets', 'assets'),
-    ('empresas.json', '.'),
 ]
 
-for extra_file in ['config_app.json', 'config_app.example.json', 'app_icon.ico', 'app_icon.png']:
+for extra_file in ['app_icon.ico', 'app_icon.png']:
     if os.path.exists(extra_file):
         datas.append((extra_file, '.'))
 binaries = []
@@ -56,7 +55,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
@@ -66,4 +65,5 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=['assets/app_icon.ico'],
+    version='file_version_info.txt',
 )

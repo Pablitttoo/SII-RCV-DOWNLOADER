@@ -22,9 +22,15 @@ from tkinter.scrolledtext import ScrolledText
 
 from ..utils import (
     obtener_ruta_base,
+    obtener_ruta_appdata,
     cargar_variables_entorno,
     CONFIG_FILE,
     EMPRESAS_FILE,
+    LISTA_EMPRESAS_DEFECTO,
+    cargar_configuracion as utils_cargar_configuracion,
+    guardar_configuracion as utils_guardar_configuracion,
+    cargar_empresas as utils_cargar_empresas,
+    guardar_empresas as utils_guardar_empresas,
     leer_credenciales_env,
     guardar_credenciales_env,
     VERSION_LOCAL,
@@ -60,9 +66,6 @@ try:
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
 except Exception:
     pass
-
-CONFIG_FILE = os.path.join(DIRECTORIO_ACTUAL, "config_app.json")
-EMPRESAS_FILE = os.path.join(DIRECTORIO_ACTUAL, "empresas.json")
 
 # ==========================================================
 # PALETA DE COLORES MODERNA (Obsidian / Deep Slate / Sidebar)
@@ -311,33 +314,7 @@ class AppSII(tk.Tk):
         self.after(1200, lambda: verificar_actualizaciones_inicio(self, log_cb=self.log))
 
     def cargar_configuracion(self):
-        if os.path.exists(CONFIG_FILE):
-            try:
-                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception:
-                pass
-        return {
-            "correlativo": 2000,
-            "contexto": "",
-            "usar_ia": True,
-            "gemini_api_key": "",
-            "openai_api_key": "",
-            "download_dir": os.path.join(os.path.expanduser("~"), "Downloads"),
-            "empresa_rut": "",
-            "rut_empresa_hn": "",
-            "sii_clave_hn": "",
-            "download_dir_hn": os.path.join(os.path.expanduser("~"), "Downloads"),
-            "hn_usar_ia": True,
-            "hn_contexto": "",
-            "facturacion_empresa": "",
-            "facturacion_usuario": "",
-            "facturacion_password": "",
-            "download_dir_fcl": os.path.join(os.path.expanduser("~"), "Downloads"),
-            "fcl_usar_ia": True,
-            "fcl_contexto": "",
-            "fcl_system_prompt": ""
-        }
+        return utils_cargar_configuracion()
 
     def guardar_configuracion(self):
         try:
@@ -362,29 +339,15 @@ class AppSII(tk.Tk):
                 "fcl_contexto": self.fcl_contexto_val.get(),
                 "fcl_system_prompt": self.fcl_system_prompt
             }
-            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                json.dump(cfg, f, indent=4, ensure_ascii=False)
+            utils_guardar_configuracion(cfg)
         except Exception:
             pass
 
     def cargar_empresas(self):
-        if os.path.exists(EMPRESAS_FILE):
-            try:
-                with open(EMPRESAS_FILE, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    if isinstance(data, list) and len(data) > 0:
-                        return data
-            except Exception:
-                pass
-        self.guardar_empresas(LISTA_EMPRESAS_DEFECTO)
-        return [dict(e) for e in LISTA_EMPRESAS_DEFECTO]
+        return utils_cargar_empresas()
 
     def guardar_empresas(self, lista_empresas):
-        try:
-            with open(EMPRESAS_FILE, "w", encoding="utf-8") as f:
-                json.dump(lista_empresas, f, indent=4, ensure_ascii=False)
-        except Exception:
-            pass
+        return utils_guardar_empresas(lista_empresas)
 
     def obtener_empresa_obj(self):
         val = self.sel_empresa_str.get()
@@ -774,7 +737,7 @@ class AppSII(tk.Tk):
         emp_header.pack(fill="x", pady=(0, 3))
         tk.Label(emp_header, text="Empresa Activa:", font=("Segoe UI", 8, "bold"), bg=C_SIDEBAR, fg=C_TEXT_MUTED).pack(side="left")
         
-        btn_cat = tk.Button(
+        self.btn_cat = tk.Button(
             emp_header,
             text="🏢 Catálogo",
             font=("Segoe UI", 7, "bold"),
@@ -790,9 +753,9 @@ class AppSII(tk.Tk):
             cursor="hand2",
             command=self.abrir_gestion_empresas
         )
-        btn_cat.pack(side="right", padx=(4, 0))
+        self.btn_cat.pack(side="right", padx=(4, 0))
 
-        btn_sii_creds = tk.Button(
+        self.btn_sii_creds = tk.Button(
             emp_header,
             text="🔑 Clave SII",
             font=("Segoe UI", 7, "bold"),
@@ -808,7 +771,7 @@ class AppSII(tk.Tk):
             cursor="hand2",
             command=self.dialogo_configurar_sii_credenciales
         )
-        btn_sii_creds.pack(side="right")
+        self.btn_sii_creds.pack(side="right")
 
         valores_empresas = [f"{e['nombre']}  •  {e['rut']}" for e in self.empresas]
         self.cb_empresa = ttk.Combobox(
@@ -826,7 +789,7 @@ class AppSII(tk.Tk):
         row_per = tk.Frame(self.params_frame, bg=C_SIDEBAR)
         row_per.pack(fill="x", pady=(0, 8))
 
-        btn_mes_prev = tk.Button(
+        self.btn_mes_prev = tk.Button(
             row_per,
             text="◀",
             font=("Segoe UI", 8, "bold"),
@@ -840,14 +803,14 @@ class AppSII(tk.Tk):
             cursor="hand2",
             command=self.mes_anterior_sidebar
         )
-        btn_mes_prev.pack(side="left", padx=(0, 3))
+        self.btn_mes_prev.pack(side="left", padx=(0, 3))
 
         meses_disp = [m for m in script.NOMBRES_MESES if m]
         self.cb_mes = ttk.Combobox(row_per, textvariable=self.sel_mes, values=meses_disp, width=10, state="readonly")
         self.cb_mes.pack(side="left", padx=(0, 3))
         self.cb_mes.bind("<<ComboboxSelected>>", lambda e: self.on_cambio_periodo_sidebar())
 
-        btn_mes_next = tk.Button(
+        self.btn_mes_next = tk.Button(
             row_per,
             text="▶",
             font=("Segoe UI", 8, "bold"),
@@ -861,7 +824,7 @@ class AppSII(tk.Tk):
             cursor="hand2",
             command=self.mes_siguiente_sidebar
         )
-        btn_mes_next.pack(side="left", padx=(0, 3))
+        self.btn_mes_next.pack(side="left", padx=(0, 3))
 
         anios_disp = [str(a) for a in range(datetime.now().year, datetime.now().year - 4, -1)]
         self.cb_anio = ttk.Combobox(row_per, textvariable=self.sel_anio, values=anios_disp, width=6, state="readonly")
@@ -897,12 +860,16 @@ class AppSII(tk.Tk):
         # Fila de RCV Pills
         self.row_rcv_pills = tk.Frame(self.panel_opciones, bg=C_SIDEBAR_CARD)
         self.row_rcv_pills.pack(fill="x", pady=(0, 4))
-        ttk.Checkbutton(self.row_rcv_pills, text="Registro", variable=self.chk_registro, style="Custom.TCheckbutton").pack(side="left", padx=(0, 4))
-        ttk.Checkbutton(self.row_rcv_pills, text="Pendientes", variable=self.chk_pendientes, style="Custom.TCheckbutton").pack(side="left", padx=(0, 4))
-        ttk.Checkbutton(self.row_rcv_pills, text="Reclamados", variable=self.chk_reclamados, style="Custom.TCheckbutton").pack(side="left")
+        self.chk_btn_registro = ttk.Checkbutton(self.row_rcv_pills, text="Registro", variable=self.chk_registro, style="Custom.TCheckbutton")
+        self.chk_btn_registro.pack(side="left", padx=(0, 4))
+        self.chk_btn_pendientes = ttk.Checkbutton(self.row_rcv_pills, text="Pendientes", variable=self.chk_pendientes, style="Custom.TCheckbutton")
+        self.chk_btn_pendientes.pack(side="left", padx=(0, 4))
+        self.chk_btn_reclamados = ttk.Checkbutton(self.row_rcv_pills, text="Reclamados", variable=self.chk_reclamados, style="Custom.TCheckbutton")
+        self.chk_btn_reclamados.pack(side="left")
 
         # Modo silencioso
-        ttk.Checkbutton(self.panel_opciones, text="Modo silencioso (navegador oculto)", variable=self.modo_headless, style="Custom.TCheckbutton").pack(anchor="w")
+        self.chk_btn_headless = ttk.Checkbutton(self.panel_opciones, text="Modo silencioso (navegador oculto)", variable=self.modo_headless, style="Custom.TCheckbutton")
+        self.chk_btn_headless.pack(anchor="w")
 
         # BOTÓN CONSULTAR DESTACADO
         self.btn_consultar_sidebar = tk.Button(
@@ -966,9 +933,10 @@ class AppSII(tk.Tk):
         self.spin_corr.pack(side="left", padx=(0, 8))
         self.spin_corr.bind("<KeyRelease>", lambda e: self.on_cambio_correlativo())
 
-        ttk.Checkbutton(row_corr, text="IA Glosa", variable=self.chk_usar_ia, style="Custom.TCheckbutton", command=self.on_cambio_correlativo).pack(side="left", padx=(0, 4))
+        self.chk_ia_btn = ttk.Checkbutton(row_corr, text="IA Glosa", variable=self.chk_usar_ia, style="Custom.TCheckbutton", command=self.on_cambio_correlativo)
+        self.chk_ia_btn.pack(side="left", padx=(0, 4))
         
-        tk.Button(
+        self.btn_ia_config = tk.Button(
             row_corr,
             text="⚙️",
             font=("Segoe UI", 8),
@@ -979,13 +947,14 @@ class AppSII(tk.Tk):
             pady=1,
             cursor="hand2",
             command=self.dialogo_configurar_ia
-        ).pack(side="left")
+        )
+        self.btn_ia_config.pack(side="left")
 
         # Carpeta de descarga
         row_fld = tk.Frame(dl_card, bg=C_SIDEBAR)
         row_fld.pack(fill="x")
 
-        tk.Button(
+        self.btn_cambiar_dir = tk.Button(
             row_fld,
             text="📂 Cambiar",
             font=("Segoe UI", 8),
@@ -996,9 +965,10 @@ class AppSII(tk.Tk):
             pady=2,
             cursor="hand2",
             command=self.seleccionar_carpeta_guardado_actual
-        ).pack(side="left", padx=(0, 4))
+        )
+        self.btn_cambiar_dir.pack(side="left", padx=(0, 4))
 
-        tk.Button(
+        self.btn_abrir_dir = tk.Button(
             row_fld,
             text="📁 Abrir",
             font=("Segoe UI", 8),
@@ -1009,7 +979,8 @@ class AppSII(tk.Tk):
             pady=2,
             cursor="hand2",
             command=self.abrir_carpeta_descargas_actual
-        ).pack(side="left")
+        )
+        self.btn_abrir_dir.pack(side="left")
 
         # 5. Footer Sidebar (Estado de Conexión)
         footer_sidebar = tk.Frame(self.sidebar_frame, bg=C_SIDEBAR)
@@ -1031,7 +1002,7 @@ class AppSII(tk.Tk):
         )
         self.lbl_sesion_badge.pack(side="left")
 
-        btn_disc = tk.Button(
+        self.btn_disc = tk.Button(
             row_stat,
             text="🔌 Desconectar",
             font=("Segoe UI", 8),
@@ -1043,7 +1014,25 @@ class AppSII(tk.Tk):
             cursor="hand2",
             command=self.desconectar_todas_sesiones
         )
-        btn_disc.pack(side="right")
+        self.btn_disc.pack(side="right")
+
+        # Botón Salir del Programa (con cierre limpio de sesión en SII)
+        self.btn_salir = tk.Button(
+            footer_sidebar,
+            text="🚪  Salir del Programa",
+            font=("Segoe UI", 9, "bold"),
+            bg="#24121a",
+            fg="#f87171",
+            activebackground="#3b1523",
+            activeforeground="#fca5a5",
+            relief="flat",
+            highlightbackground="#881337",
+            highlightthickness=1,
+            pady=6,
+            cursor="hand2",
+            command=self.confirmar_y_salir
+        )
+        self.btn_salir.pack(fill="x", pady=(6, 0))
 
     def toggle_opciones_avanzadas(self):
         if self.opciones_avanzadas_visibles:
@@ -1264,7 +1253,7 @@ class AppSII(tk.Tk):
         self.cb_orden.pack(side="left", padx=(0, 10))
         self.cb_orden.bind("<<ComboboxSelected>>", self.on_cambio_orden)
 
-        btn_exp = tk.Button(
+        self.btn_exp_fac = tk.Button(
             tb,
             text="📊 Exportar CSV",
             font=("Segoe UI", 8, "bold"),
@@ -1276,9 +1265,9 @@ class AppSII(tk.Tk):
             cursor="hand2",
             command=self.exportar_rcv_csv
         )
-        btn_exp.pack(side="right")
+        self.btn_exp_fac.pack(side="right")
 
-        btn_copy = tk.Button(
+        self.btn_copy_fac = tk.Button(
             tb,
             text="📋 Copiar a Excel",
             font=("Segoe UI", 8, "bold"),
@@ -1290,7 +1279,7 @@ class AppSII(tk.Tk):
             cursor="hand2",
             command=self.copiar_rcv_excel
         )
-        btn_copy.pack(side="right", padx=(0, 6))
+        self.btn_copy_fac.pack(side="right", padx=(0, 6))
 
         # TABLA DE FACTURAS (TREEVIEW)
         tree_frame = tk.Frame(parent, bg=C_CANVAS)
@@ -1362,8 +1351,10 @@ class AppSII(tk.Tk):
         self.lbl_seleccion_resumen = tk.Label(left_act, text="0 facturas seleccionadas", font=("Segoe UI", 9, "bold"), bg=C_SURFACE, fg=C_TEXT_MAIN)
         self.lbl_seleccion_resumen.pack(side="left", padx=(0, 10))
 
-        tk.Button(left_act, text="Seleccionar Todo", font=("Segoe UI", 8), bg=C_SURFACE_ALT, fg=C_TEXT_MUTED, relief="flat", padx=6, pady=2, cursor="hand2", command=self.seleccionar_todo_rcv).pack(side="left", padx=(0, 4))
-        tk.Button(left_act, text="Limpiar", font=("Segoe UI", 8), bg=C_SURFACE_ALT, fg=C_TEXT_MUTED, relief="flat", padx=6, pady=2, cursor="hand2", command=self.limpiar_seleccion_rcv).pack(side="left")
+        self.btn_sel_todo_fac = tk.Button(left_act, text="Seleccionar Todo", font=("Segoe UI", 8), bg=C_SURFACE_ALT, fg=C_TEXT_MUTED, relief="flat", padx=6, pady=2, cursor="hand2", command=self.seleccionar_todo_rcv)
+        self.btn_sel_todo_fac.pack(side="left", padx=(0, 4))
+        self.btn_limpiar_sel_fac = tk.Button(left_act, text="Limpiar", font=("Segoe UI", 8), bg=C_SURFACE_ALT, fg=C_TEXT_MUTED, relief="flat", padx=6, pady=2, cursor="hand2", command=self.limpiar_seleccion_rcv)
+        self.btn_limpiar_sel_fac.pack(side="left")
 
         right_act = tk.Frame(act_bar, bg=C_SURFACE)
         right_act.pack(side="right")
@@ -1414,10 +1405,12 @@ class AppSII(tk.Tk):
         hdr_right = tk.Frame(hdr_top, bg=C_CANVAS)
         hdr_right.pack(side="right")
 
-        tk.Radiobutton(hdr_right, text="Recibidas", variable=self.hn_tipo_consulta, value="recibidas", font=("Segoe UI", 9, "bold"), bg=C_CANVAS, fg=C_INFO, selectcolor=C_INPUT, activebackground=C_CANVAS).pack(side="left", padx=(0, 6))
-        tk.Radiobutton(hdr_right, text="Emitidas", variable=self.hn_tipo_consulta, value="emitidas", font=("Segoe UI", 9, "bold"), bg=C_CANVAS, fg=C_WARNING, selectcolor=C_INPUT, activebackground=C_CANVAS).pack(side="left", padx=(0, 10))
+        self.rb_hn_rec = tk.Radiobutton(hdr_right, text="Recibidas", variable=self.hn_tipo_consulta, value="recibidas", font=("Segoe UI", 9, "bold"), bg=C_CANVAS, fg=C_INFO, selectcolor=C_INPUT, activebackground=C_CANVAS)
+        self.rb_hn_rec.pack(side="left", padx=(0, 6))
+        self.rb_hn_emi = tk.Radiobutton(hdr_right, text="Emitidas", variable=self.hn_tipo_consulta, value="emitidas", font=("Segoe UI", 9, "bold"), bg=C_CANVAS, fg=C_WARNING, selectcolor=C_INPUT, activebackground=C_CANVAS)
+        self.rb_hn_emi.pack(side="left", padx=(0, 10))
 
-        btn_clave_hn = tk.Button(
+        self.btn_clave_hn = tk.Button(
             hdr_right,
             text="🔑 Clave SII Empresa",
             font=("Segoe UI", 8, "bold"),
@@ -1429,7 +1422,7 @@ class AppSII(tk.Tk):
             cursor="hand2",
             command=self.abrir_dialogo_credenciales_hn
         )
-        btn_clave_hn.pack(side="left")
+        self.btn_clave_hn.pack(side="left")
 
         self.lbl_hdr_hn_sub = tk.Label(hdr, text="Consultando periodo actual...", font=("Segoe UI", 9), bg=C_CANVAS, fg=C_TEXT_MUTED)
         self.lbl_hdr_hn_sub.pack(anchor="w")
@@ -1478,7 +1471,7 @@ class AppSII(tk.Tk):
             command=lambda: [self.hn_busqueda_texto.set(""), self.filtrar_tabla_honorarios()]
         ).pack(side="right", padx=(0, 2))
 
-        btn_exp = tk.Button(
+        self.btn_exp_hn = tk.Button(
             tb,
             text="📊 Exportar CSV",
             font=("Segoe UI", 8, "bold"),
@@ -1490,9 +1483,9 @@ class AppSII(tk.Tk):
             cursor="hand2",
             command=self.exportar_honorarios_csv
         )
-        btn_exp.pack(side="right")
+        self.btn_exp_hn.pack(side="right")
 
-        btn_copy = tk.Button(
+        self.btn_copy_hn = tk.Button(
             tb,
             text="📋 Copiar a Excel",
             font=("Segoe UI", 8, "bold"),
@@ -1504,7 +1497,7 @@ class AppSII(tk.Tk):
             cursor="hand2",
             command=self.copiar_honorarios_excel
         )
-        btn_copy.pack(side="right", padx=(0, 6))
+        self.btn_copy_hn.pack(side="right", padx=(0, 6))
 
         # TABLA DE HONORARIOS
         tree_frame = tk.Frame(parent, bg=C_CANVAS)
@@ -1569,8 +1562,10 @@ class AppSII(tk.Tk):
         self.lbl_seleccion_hn = tk.Label(left_act_hn, text="0 boletas seleccionadas", font=("Segoe UI", 9, "bold"), bg=C_SURFACE, fg=C_TEXT_MAIN)
         self.lbl_seleccion_hn.pack(side="left", padx=(0, 10))
 
-        tk.Button(left_act_hn, text="Seleccionar Todo", font=("Segoe UI", 8), bg=C_SURFACE_ALT, fg=C_TEXT_MUTED, relief="flat", padx=6, pady=2, cursor="hand2", command=self.seleccionar_todo_hn).pack(side="left", padx=(0, 4))
-        tk.Button(left_act_hn, text="Limpiar", font=("Segoe UI", 8), bg=C_SURFACE_ALT, fg=C_TEXT_MUTED, relief="flat", padx=6, pady=2, cursor="hand2", command=self.limpiar_seleccion_hn).pack(side="left")
+        self.btn_sel_todo_hn = tk.Button(left_act_hn, text="Seleccionar Todo", font=("Segoe UI", 8), bg=C_SURFACE_ALT, fg=C_TEXT_MUTED, relief="flat", padx=6, pady=2, cursor="hand2", command=self.seleccionar_todo_hn)
+        self.btn_sel_todo_hn.pack(side="left", padx=(0, 4))
+        self.btn_limpiar_sel_hn = tk.Button(left_act_hn, text="Limpiar", font=("Segoe UI", 8), bg=C_SURFACE_ALT, fg=C_TEXT_MUTED, relief="flat", padx=6, pady=2, cursor="hand2", command=self.limpiar_seleccion_hn)
+        self.btn_limpiar_sel_hn.pack(side="left")
 
         right_act_hn = tk.Frame(act_bar_hn, bg=C_SURFACE)
         right_act_hn.pack(side="right")
@@ -1619,7 +1614,7 @@ class AppSII(tk.Tk):
         self.lbl_hdr_fcl_tit = tk.Label(hdr_top, text="🌐 Facturación.cl • Panel DTE Recibidos (Compras)", font=("Segoe UI", 13, "bold"), bg=C_CANVAS, fg=C_TEXT_MAIN)
         self.lbl_hdr_fcl_tit.pack(side="left")
 
-        btn_cred_fcl = tk.Button(
+        self.btn_cred_fcl = tk.Button(
             hdr_top,
             text="🔑 Credenciales Facturación.cl",
             font=("Segoe UI", 8, "bold"),
@@ -1635,7 +1630,7 @@ class AppSII(tk.Tk):
             cursor="hand2",
             command=self.abrir_dialogo_credenciales_fcl
         )
-        btn_cred_fcl.pack(side="right")
+        self.btn_cred_fcl.pack(side="right")
 
         self.lbl_hdr_fcl_sub = tk.Label(hdr, text="Consultando periodo actual...", font=("Segoe UI", 9), bg=C_CANVAS, fg=C_TEXT_MUTED)
         self.lbl_hdr_fcl_sub.pack(anchor="w")
@@ -1695,7 +1690,7 @@ class AppSII(tk.Tk):
         self.cb_filtro_fcl.pack(side="left", padx=(0, 10))
         self.cb_filtro_fcl.bind("<<ComboboxSelected>>", lambda e: self.filtrar_tabla_fcl())
 
-        btn_exp = tk.Button(
+        self.btn_exp_fcl = tk.Button(
             tb,
             text="📊 Exportar CSV",
             font=("Segoe UI", 8, "bold"),
@@ -1707,9 +1702,9 @@ class AppSII(tk.Tk):
             cursor="hand2",
             command=lambda: self.exportar_fcl_seccion_csv("todos")
         )
-        btn_exp.pack(side="right")
+        self.btn_exp_fcl.pack(side="right")
 
-        btn_copy = tk.Button(
+        self.btn_copy_fcl = tk.Button(
             tb,
             text="📋 Copiar a Excel",
             font=("Segoe UI", 8, "bold"),
@@ -1721,7 +1716,7 @@ class AppSII(tk.Tk):
             cursor="hand2",
             command=self.copiar_fcl_excel
         )
-        btn_copy.pack(side="right", padx=(0, 6))
+        self.btn_copy_fcl.pack(side="right", padx=(0, 6))
 
         # TABLA DE FACTURACIÓN.CL
         tree_frame = tk.Frame(parent, bg=C_CANVAS)
@@ -1790,8 +1785,10 @@ class AppSII(tk.Tk):
         self.lbl_seleccion_fcl = tk.Label(left_act_fcl, text="0 DTEs seleccionados", font=("Segoe UI", 9, "bold"), bg=C_SURFACE, fg=C_TEXT_MAIN)
         self.lbl_seleccion_fcl.pack(side="left", padx=(0, 10))
 
-        tk.Button(left_act_fcl, text="Seleccionar Todo", font=("Segoe UI", 8), bg=C_SURFACE_ALT, fg=C_TEXT_MUTED, relief="flat", padx=6, pady=2, cursor="hand2", command=self.seleccionar_todo_fcl).pack(side="left", padx=(0, 4))
-        tk.Button(left_act_fcl, text="Limpiar", font=("Segoe UI", 8), bg=C_SURFACE_ALT, fg=C_TEXT_MUTED, relief="flat", padx=6, pady=2, cursor="hand2", command=self.limpiar_seleccion_fcl).pack(side="left")
+        self.btn_sel_todo_fcl = tk.Button(left_act_fcl, text="Seleccionar Todo", font=("Segoe UI", 8), bg=C_SURFACE_ALT, fg=C_TEXT_MUTED, relief="flat", padx=6, pady=2, cursor="hand2", command=self.seleccionar_todo_fcl)
+        self.btn_sel_todo_fcl.pack(side="left", padx=(0, 4))
+        self.btn_limpiar_sel_fcl = tk.Button(left_act_fcl, text="Limpiar", font=("Segoe UI", 8), bg=C_SURFACE_ALT, fg=C_TEXT_MUTED, relief="flat", padx=6, pady=2, cursor="hand2", command=self.limpiar_seleccion_fcl)
+        self.btn_limpiar_sel_fcl.pack(side="left")
 
         right_act_fcl = tk.Frame(act_bar_fcl, bg=C_SURFACE)
         right_act_fcl.pack(side="right")
@@ -2040,6 +2037,191 @@ class AppSII(tk.Tk):
         self.lbl_hdr_hn_sub.config(text=f"{sub_txt} • {len(self.boletas_honorarios)} boletas ({self.hn_tipo_consulta.get().capitalize()})")
         self.lbl_hdr_fcl_sub.config(text=f"{nom} • {m} {a} • {len(self.fcl_documentos)} DTEs disponibles")
 
+    def set_estado_interfaz_ocupada(self, ocupada=True, permitir_cancelar=True):
+        """
+        Bloquea/apaga todos los controles interactivos que no deben usarse
+        mientras se ejecuta una consulta o descarga masiva.
+        """
+        self.en_ejecucion = ocupada
+        estado = "disabled" if ocupada else "normal"
+        estado_combo = "disabled" if ocupada else "readonly"
+
+        # 1. Navegación de módulos en Sidebar
+        for btn in (getattr(self, "btn_nav_facturas", None), getattr(self, "btn_nav_honorarios", None), getattr(self, "btn_nav_facturacion_cl", None)):
+            if btn:
+                try:
+                    btn.config(state=estado)
+                except Exception:
+                    pass
+
+        # 2. Selector de Empresa y Claves
+        if hasattr(self, "cb_empresa"):
+            try:
+                self.cb_empresa.config(state=estado_combo)
+            except Exception:
+                pass
+        if hasattr(self, "btn_cat"):
+            try:
+                self.btn_cat.config(state=estado)
+            except Exception:
+                pass
+        if hasattr(self, "btn_sii_creds"):
+            try:
+                self.btn_sii_creds.config(state=estado)
+            except Exception:
+                pass
+
+        # 3. Periodo (Mes, Año, Salto ◀ ▶)
+        for w in (getattr(self, "btn_mes_prev", None), getattr(self, "btn_mes_next", None)):
+            if w:
+                try:
+                    w.config(state=estado)
+                except Exception:
+                    pass
+        for cb in (getattr(self, "cb_mes", None), getattr(self, "cb_anio", None)):
+            if cb:
+                try:
+                    cb.config(state=estado_combo)
+                except Exception:
+                    pass
+
+        # 4. Opciones Avanzadas y Checkbuttons
+        if hasattr(self, "btn_toggle_opciones"):
+            try:
+                self.btn_toggle_opciones.config(state=estado)
+            except Exception:
+                pass
+        for chk in (
+            getattr(self, "chk_btn_registro", None),
+            getattr(self, "chk_btn_pendientes", None),
+            getattr(self, "chk_btn_reclamados", None),
+            getattr(self, "chk_btn_headless", None)
+        ):
+            if chk:
+                try:
+                    chk.config(state=estado)
+                except Exception:
+                    pass
+
+        # 5. Descargas & IA
+        if hasattr(self, "spin_corr"):
+            try:
+                self.spin_corr.config(state=estado)
+            except Exception:
+                pass
+        if hasattr(self, "chk_ia_btn"):
+            try:
+                self.chk_ia_btn.config(state=estado)
+            except Exception:
+                pass
+        if hasattr(self, "btn_ia_config"):
+            try:
+                self.btn_ia_config.config(state=estado)
+            except Exception:
+                pass
+        if hasattr(self, "btn_cambiar_dir"):
+            try:
+                self.btn_cambiar_dir.config(state=estado)
+            except Exception:
+                pass
+        if hasattr(self, "btn_abrir_dir"):
+            try:
+                self.btn_abrir_dir.config(state=estado)
+            except Exception:
+                pass
+
+        # 6. Footer de Sidebar (Desconectar y Salir)
+        if hasattr(self, "btn_disc"):
+            try:
+                self.btn_disc.config(state=estado)
+            except Exception:
+                pass
+        if hasattr(self, "btn_salir"):
+            try:
+                self.btn_salir.config(state=estado)
+            except Exception:
+                pass
+
+        # 7. Botones de Acción Vista 1 (Facturas RCV)
+        for w in (
+            getattr(self, "btn_exp_fac", None),
+            getattr(self, "btn_copy_fac", None),
+            getattr(self, "btn_sel_todo_fac", None),
+            getattr(self, "btn_limpiar_sel_fac", None),
+            getattr(self, "btn_descargar_seleccionada", None),
+            getattr(self, "btn_descargar_todo_mes", None),
+        ):
+            if w:
+                try:
+                    w.config(state=estado)
+                except Exception:
+                    pass
+
+        # 8. Botones de Acción Vista 2 (Honorarios BHE)
+        for w in (
+            getattr(self, "rb_hn_rec", None),
+            getattr(self, "rb_hn_emi", None),
+            getattr(self, "btn_clave_hn", None),
+            getattr(self, "btn_exp_hn", None),
+            getattr(self, "btn_copy_hn", None),
+            getattr(self, "btn_sel_todo_hn", None),
+            getattr(self, "btn_limpiar_sel_hn", None),
+            getattr(self, "btn_descargar_hn_selec", None),
+            getattr(self, "btn_descargar_hn_todo", None),
+        ):
+            if w:
+                try:
+                    w.config(state=estado)
+                except Exception:
+                    pass
+
+        # 9. Botones de Acción Vista 3 (Facturación.cl)
+        for w in (
+            getattr(self, "btn_cred_fcl", None),
+            getattr(self, "cb_filtro_fcl", None),
+            getattr(self, "btn_exp_fcl", None),
+            getattr(self, "btn_copy_fcl", None),
+            getattr(self, "btn_sel_todo_fcl", None),
+            getattr(self, "btn_limpiar_sel_fcl", None),
+            getattr(self, "btn_descargar_fcl_selec", None),
+            getattr(self, "btn_descargar_fcl_todo", None),
+        ):
+            if w:
+                try:
+                    if isinstance(w, ttk.Combobox):
+                        w.config(state=estado_combo)
+                    else:
+                        w.config(state=estado)
+                except Exception:
+                    pass
+
+        # Barra de progreso y botón de consulta/cancelar
+        if ocupada:
+            self.btn_consultar_sidebar.pack_forget()
+            if permitir_cancelar:
+                self.btn_cancelar_sidebar.pack(fill="x", pady=(0, 4))
+            else:
+                self.btn_cancelar_sidebar.pack_forget()
+            self.pb_sidebar.pack(fill="x", pady=(0, 6))
+            self.pb_sidebar.start(10)
+        else:
+            self.pb_sidebar.stop()
+            self.pb_sidebar.pack_forget()
+            self.btn_cancelar_sidebar.pack_forget()
+            self.btn_consultar_sidebar.pack(fill="x", pady=(0, 4))
+            try:
+                self.on_seleccion_fila()
+            except Exception:
+                pass
+            try:
+                self.on_seleccion_fila_hn()
+            except Exception:
+                pass
+            try:
+                self.on_seleccion_fila_fcl()
+            except Exception:
+                pass
+
     # ==========================================================
     # DISPATCHER DE CONSULTA Y DESCARGA SEGÚN MÓDULO ACTIVO
     # ==========================================================
@@ -2112,13 +2294,8 @@ class AppSII(tk.Tk):
             self.dialogo_configurar_sii_credenciales()
             return
 
-        self.en_ejecucion = True
         self.cancelar_solicitado = False
-
-        self.btn_consultar_sidebar.pack_forget()
-        self.btn_cancelar_sidebar.pack(fill="x", pady=(0, 4))
-        self.pb_sidebar.pack(fill="x", pady=(0, 6))
-        self.pb_sidebar.start(10)
+        self.set_estado_interfaz_ocupada(True, permitir_cancelar=True)
 
         mes_nombre = self.sel_mes.get()
         mes_idx = script.NOMBRES_MESES.index(mes_nombre) if mes_nombre in script.NOMBRES_MESES else datetime.now().month
@@ -2156,11 +2333,7 @@ class AppSII(tk.Tk):
         self.after(0, lambda: self._on_consulta_terminada(exito, docs, err_msg))
 
     def _on_consulta_terminada(self, exito, docs, err_msg):
-        self.en_ejecucion = False
-        self.pb_sidebar.stop()
-        self.pb_sidebar.pack_forget()
-        self.btn_cancelar_sidebar.pack_forget()
-        self.btn_consultar_sidebar.pack(fill="x", pady=(0, 4))
+        self.set_estado_interfaz_ocupada(False)
 
         if exito:
             self.documentos = docs
@@ -2363,9 +2536,7 @@ class AppSII(tk.Tk):
     def descargar_factura_individual_doc(self, doc):
         if self.en_ejecucion:
             return
-        self.en_ejecucion = True
-        self.pb_sidebar.pack(fill="x", pady=(0, 6))
-        self.pb_sidebar.start(10)
+        self.set_estado_interfaz_ocupada(True, permitir_cancelar=False)
 
         folio = doc.get("folio", "")
         self.log(f"Descargando PDF individual folio #{folio}...")
@@ -2393,9 +2564,7 @@ class AppSII(tk.Tk):
         self.after(0, lambda: self._on_descarga_individual_terminada(exito, ruta, corr_final, err_msg))
 
     def _on_descarga_individual_terminada(self, exito, ruta, corr_final, err_msg):
-        self.en_ejecucion = False
-        self.pb_sidebar.stop()
-        self.pb_sidebar.pack_forget()
+        self.set_estado_interfaz_ocupada(False)
 
         if exito:
             if corr_final is not None:
@@ -2430,12 +2599,8 @@ class AppSII(tk.Tk):
     def iniciar_descarga_lote_folios(self, folios_lista):
         if self.en_ejecucion:
             return
-        self.en_ejecucion = True
-
-        self.btn_consultar_sidebar.pack_forget()
-        self.btn_cancelar_sidebar.pack(fill="x", pady=(0, 4))
-        self.pb_sidebar.pack(fill="x", pady=(0, 6))
-        self.pb_sidebar.start(10)
+        self.cancelar_solicitado = False
+        self.set_estado_interfaz_ocupada(True, permitir_cancelar=True)
 
         mes_nombre = self.sel_mes.get()
         mes_idx = script.NOMBRES_MESES.index(mes_nombre) if mes_nombre in script.NOMBRES_MESES else datetime.now().month
@@ -2468,11 +2633,7 @@ class AppSII(tk.Tk):
         self.after(0, lambda: self._on_descarga_todas_terminada(exito, total_desc, corr_final, err_msg))
 
     def _on_descarga_todas_terminada(self, exito, total_desc, corr_final, err_msg):
-        self.en_ejecucion = False
-        self.pb_sidebar.stop()
-        self.pb_sidebar.pack_forget()
-        self.btn_cancelar_sidebar.pack_forget()
-        self.btn_consultar_sidebar.pack(fill="x", pady=(0, 4))
+        self.set_estado_interfaz_ocupada(False)
 
         if corr_final is not None:
             self.correlativo_val.set(corr_final)
@@ -2631,13 +2792,8 @@ class AppSII(tk.Tk):
             self.abrir_dialogo_credenciales_hn()
             return
 
-        self.en_ejecucion = True
         self.cancelar_hn_solicitado = False
-
-        self.btn_consultar_sidebar.pack_forget()
-        self.btn_cancelar_sidebar.pack(fill="x", pady=(0, 4))
-        self.pb_sidebar.pack(fill="x", pady=(0, 6))
-        self.pb_sidebar.start(10)
+        self.set_estado_interfaz_ocupada(True, permitir_cancelar=True)
 
         mes_nombre = self.sel_mes.get()
         mes_idx = script.NOMBRES_MESES.index(mes_nombre) if mes_nombre in script.NOMBRES_MESES else datetime.now().month
@@ -2667,11 +2823,7 @@ class AppSII(tk.Tk):
         self.after(0, lambda: self._on_consulta_honorarios_terminada(exito, boletas, err_msg))
 
     def _on_consulta_honorarios_terminada(self, exito, boletas, err_msg):
-        self.en_ejecucion = False
-        self.pb_sidebar.stop()
-        self.pb_sidebar.pack_forget()
-        self.btn_cancelar_sidebar.pack_forget()
-        self.btn_consultar_sidebar.pack(fill="x", pady=(0, 4))
+        self.set_estado_interfaz_ocupada(False)
 
         if exito:
             self.boletas_honorarios = boletas
@@ -2874,9 +3026,7 @@ class AppSII(tk.Tk):
             self.abrir_dialogo_credenciales_hn()
             return
 
-        self.en_ejecucion = True
-        self.pb_sidebar.pack(fill="x", pady=(0, 6))
-        self.pb_sidebar.start(10)
+        self.set_estado_interfaz_ocupada(True, permitir_cancelar=False)
 
         folio = boleta.get("folio", "")
         self.log(f"Descargando boleta individual #{folio}...")
@@ -2907,9 +3057,7 @@ class AppSII(tk.Tk):
         self.after(0, lambda: self._on_descarga_boleta_terminada(exito, ruta, corr_final, err_msg))
 
     def _on_descarga_boleta_terminada(self, exito, ruta, corr_final, err_msg):
-        self.en_ejecucion = False
-        self.pb_sidebar.stop()
-        self.pb_sidebar.pack_forget()
+        self.set_estado_interfaz_ocupada(False)
 
         if exito:
             if corr_final is not None:
@@ -2948,12 +3096,8 @@ class AppSII(tk.Tk):
             self.abrir_dialogo_credenciales_hn()
             return
 
-        self.en_ejecucion = True
-
-        self.btn_consultar_sidebar.pack_forget()
-        self.btn_cancelar_sidebar.pack(fill="x", pady=(0, 4))
-        self.pb_sidebar.pack(fill="x", pady=(0, 6))
-        self.pb_sidebar.start(10)
+        self.cancelar_hn_solicitado = False
+        self.set_estado_interfaz_ocupada(True, permitir_cancelar=True)
 
         mes_nombre = self.sel_mes.get()
         mes_idx = script.NOMBRES_MESES.index(mes_nombre) if mes_nombre in script.NOMBRES_MESES else datetime.now().month
@@ -2991,11 +3135,7 @@ class AppSII(tk.Tk):
         self.after(0, lambda: self._on_descarga_todas_honorarios_terminada(exito, total, corr_final, err_msg))
 
     def _on_descarga_todas_honorarios_terminada(self, exito, total, corr_final, err_msg):
-        self.en_ejecucion = False
-        self.pb_sidebar.stop()
-        self.pb_sidebar.pack_forget()
-        self.btn_cancelar_sidebar.pack_forget()
-        self.btn_consultar_sidebar.pack(fill="x", pady=(0, 4))
+        self.set_estado_interfaz_ocupada(False)
 
         if corr_final is not None:
             self.correlativo_val.set(corr_final)
@@ -3143,13 +3283,8 @@ class AppSII(tk.Tk):
             self.abrir_dialogo_credenciales_fcl()
             return
 
-        self.en_ejecucion = True
         self.cancelar_fcl_solicitado = False
-
-        self.btn_consultar_sidebar.pack_forget()
-        self.btn_cancelar_sidebar.pack(fill="x", pady=(0, 4))
-        self.pb_sidebar.pack(fill="x", pady=(0, 6))
-        self.pb_sidebar.start(10)
+        self.set_estado_interfaz_ocupada(True, permitir_cancelar=True)
 
         mes_nombre = self.sel_mes.get()
         mes_idx = script.NOMBRES_MESES.index(mes_nombre) if mes_nombre in script.NOMBRES_MESES else datetime.now().month
@@ -3178,11 +3313,7 @@ class AppSII(tk.Tk):
         self.after(0, lambda: self._on_consulta_facturacion_cl_terminada(exito, res, err_msg))
 
     def _on_consulta_facturacion_cl_terminada(self, exito, res, err_msg):
-        self.en_ejecucion = False
-        self.pb_sidebar.stop()
-        self.pb_sidebar.pack_forget()
-        self.btn_cancelar_sidebar.pack_forget()
-        self.btn_consultar_sidebar.pack(fill="x", pady=(0, 4))
+        self.set_estado_interfaz_ocupada(False)
 
         if exito and res:
             self.fcl_documentos = res.get("todos", [])
@@ -3364,9 +3495,7 @@ class AppSII(tk.Tk):
     def descargar_dte_individual_doc(self, doc):
         if self.en_ejecucion:
             return
-        self.en_ejecucion = True
-        self.pb_sidebar.pack(fill="x", pady=(0, 6))
-        self.pb_sidebar.start(10)
+        self.set_estado_interfaz_ocupada(True, permitir_cancelar=False)
 
         folio = doc.get("folio", "")
         self.log(f"Descargando DTE individual Facturación.cl folio #{folio}...")
@@ -3394,9 +3523,7 @@ class AppSII(tk.Tk):
         self.after(0, lambda: self._on_descarga_dte_terminada_fcl(exito, ruta, corr_final, err_msg))
 
     def _on_descarga_dte_terminada_fcl(self, exito, ruta, corr_final, err_msg):
-        self.en_ejecucion = False
-        self.pb_sidebar.stop()
-        self.pb_sidebar.pack_forget()
+        self.set_estado_interfaz_ocupada(False)
 
         if exito:
             if corr_final is not None:
@@ -3429,12 +3556,8 @@ class AppSII(tk.Tk):
     def iniciar_descarga_lote_fcl(self, docs_lista):
         if self.en_ejecucion:
             return
-        self.en_ejecucion = True
-
-        self.btn_consultar_sidebar.pack_forget()
-        self.btn_cancelar_sidebar.pack(fill="x", pady=(0, 4))
-        self.pb_sidebar.pack(fill="x", pady=(0, 6))
-        self.pb_sidebar.start(10)
+        self.cancelar_fcl_solicitado = False
+        self.set_estado_interfaz_ocupada(True, permitir_cancelar=True)
 
         self.log(f"Descargando {len(docs_lista)} DTEs desde Facturación.cl...")
         threading.Thread(target=self._hilo_descarga_todas_facturacion_cl, args=(docs_lista,), daemon=True).start()
@@ -3471,11 +3594,7 @@ class AppSII(tk.Tk):
         self.after(0, lambda: self._on_descarga_todas_facturacion_cl_terminada(exito, total, corr_final, err_msg))
 
     def _on_descarga_todas_facturacion_cl_terminada(self, exito, total, corr_final, err_msg):
-        self.en_ejecucion = False
-        self.pb_sidebar.stop()
-        self.pb_sidebar.pack_forget()
-        self.btn_cancelar_sidebar.pack_forget()
-        self.btn_consultar_sidebar.pack(fill="x", pady=(0, 4))
+        self.set_estado_interfaz_ocupada(False)
 
         if corr_final is not None:
             self.correlativo_val.set(corr_final)
@@ -3675,42 +3794,97 @@ class AppSII(tk.Tk):
         else:
             self.lbl_sesion_badge.config(text="○ SII Inactivo", fg=C_TEXT_MUTED)
 
+    def _cerrar_todas_sesiones_sincrono(self, log_cb=print):
+        """Cierra en paralelo todas las sesiones activas en el SII y Facturación.cl."""
+        def _c_rcv():
+            try:
+                script.gestor_sesion.cerrar_sesion(log_cb=log_cb)
+            except Exception:
+                pass
+
+        def _c_bhe():
+            try:
+                script_honorarios.gestor_honorarios.cerrar_sesion(log_cb=log_cb)
+            except Exception:
+                pass
+
+        def _c_fcl():
+            try:
+                script_facturacion_cl.gestor_facturacion_cl.cerrar_sesion(log_cb=log_cb)
+            except Exception:
+                pass
+
+        threads = [
+            threading.Thread(target=_c_rcv, daemon=True),
+            threading.Thread(target=_c_bhe, daemon=True),
+            threading.Thread(target=_c_fcl, daemon=True)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=3.5)
+
     def desconectar_todas_sesiones(self):
         if messagebox.askyesno("Desconectar Sesiones", "¿Deseas cerrar limpiamente todas las sesiones persistentes en los servidores del SII y Facturación.cl?", parent=self):
             self.log("Cerrando todas las conexiones...")
             threading.Thread(target=self._hilo_desconectar, daemon=True).start()
 
     def _hilo_desconectar(self):
-        try:
-            script.gestor_sesion.cerrar_sesion(log_cb=self.log)
-        except Exception:
-            pass
-        try:
-            script_honorarios.gestor_honorarios.cerrar_sesion(log_cb=self.log)
-        except Exception:
-            pass
-        try:
-            script_facturacion_cl.gestor_facturacion_cl.cerrar_sesion(log_cb=self.log)
-        except Exception:
-            pass
+        self._cerrar_todas_sesiones_sincrono(log_cb=self.log)
         self.after(0, lambda: self.actualizar_badge_sesion(False))
-        self.log("✓ Todas las sesiones han sido desconectadas.")
+        self.log("✓ Todas las sesiones han sido desconectadas del SII.")
+
+    def ejecutar_cierre_definitivo(self):
+        """Guarda configuración, libera sesiones en SII y cierra la app."""
+        try:
+            if hasattr(self, "btn_salir") and self.btn_salir.winfo_exists():
+                self.btn_salir.config(text="⏳ Cerrando sesión SII...", state="disabled")
+            if hasattr(self, "lbl_sesion_badge") and self.lbl_sesion_badge.winfo_exists():
+                self.lbl_sesion_badge.config(text="○ Desconectando...", fg=C_WARNING)
+            self.update_idletasks()
+        except Exception:
+            pass
+
+        self.guardar_configuracion()
+        self._cerrar_todas_sesiones_sincrono(log_cb=print)
+        try:
+            self.destroy()
+        except Exception:
+            pass
+        os._exit(0)
+
+    def confirmar_y_salir(self):
+        """Pregunta confirmación antes de salir y libera las sesiones activas en el SII."""
+        if self.en_ejecucion:
+            if not messagebox.askyesno(
+                "Operación en Curso",
+                "Hay una consulta o descarga en ejecución.\n\n¿Deseas cancelarla y salir del programa de todos modos?",
+                icon="warning",
+                parent=self
+            ):
+                return
+            self.cancelar_consulta_actual()
+
+        if messagebox.askyesno(
+            "Salir del Gestor",
+            "¿Deseas salir del Gestor Tributario?\n\nSe cerrarán y liberarán limpiamente las sesiones abiertas en el SII y Facturación.cl.",
+            parent=self
+        ):
+            self.ejecutar_cierre_definitivo()
 
     def al_cerrar_app(self):
-        self.guardar_configuracion()
-        try:
-            script.gestor_sesion.cerrar_sesion(log_cb=print)
-        except Exception:
-            pass
-        try:
-            script_honorarios.gestor_honorarios.cerrar_sesion(log_cb=print)
-        except Exception:
-            pass
-        try:
-            script_facturacion_cl.gestor_facturacion_cl.cerrar_sesion(log_cb=print)
-        except Exception:
-            pass
-        self.destroy()
+        """Manejador del botón cerrar [X] de la ventana."""
+        if self.en_ejecucion:
+            if not messagebox.askyesno(
+                "Operación en Curso",
+                "Hay una consulta o descarga en curso.\n\n¿Deseas cancelarla y salir del programa?",
+                icon="warning",
+                parent=self
+            ):
+                return
+            self.cancelar_consulta_actual()
+
+        self.ejecutar_cierre_definitivo()
 
 
 if __name__ == "__main__":

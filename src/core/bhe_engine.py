@@ -284,7 +284,7 @@ class GestorSesionHonorarios:
                 try:
                     log_cb("Cerrando sesión de Honorarios en el SII...")
                     self.driver.get("https://zeusr.sii.cl/cgi_AUT2000/autLogout.cgi")
-                    time.sleep(2.5)
+                    time.sleep(1.5)
                     self.driver.quit()
                 except Exception:
                     pass

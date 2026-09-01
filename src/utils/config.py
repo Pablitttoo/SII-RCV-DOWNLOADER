@@ -1,42 +1,24 @@
 """
-Gestión de persistencia y archivos de configuración (config_app.json), empresas (empresas.json) y .env.
+Gestión de persistencia y archivos de configuración (config_app.json), empresas (empresas.json) y .env
+almacenados de forma segura y aislada en AppData del usuario.
 """
 
 import os
 import json
-from .helpers import obtener_ruta_base, cargar_variables_entorno
+import shutil
+from .helpers import obtener_ruta_base, obtener_ruta_appdata, cargar_variables_entorno
 
-CONFIG_FILE = os.path.join(obtener_ruta_base(), "config_app.json")
-EMPRESAS_FILE = os.path.join(obtener_ruta_base(), "empresas.json")
+CONFIG_FILE = os.path.join(obtener_ruta_appdata(), "config_app.json")
+EMPRESAS_FILE = os.path.join(obtener_ruta_appdata(), "empresas.json")
 
+# Lista inicial de muestra para nuevos usuarios (sin datos reales)
 LISTA_EMPRESAS_DEFECTO = [
-    {"nombre": "BEALICE SPA", "rut": "76505297-1"},
-    {"nombre": "PEDRO ANTONIO CONTRERAS CALDERON", "rut": "9696421-8"},
-    {"nombre": "AUDIFONOS CHILE SPA", "rut": "77099672-4"},
-    {"nombre": "COMUNICACIONES DIRECTAS CHILE SPA", "rut": "76299996-K"},
-    {"nombre": "OKSALUD SPA", "rut": "76458359-0"},
-    {"nombre": "V-ACTION SPA", "rut": "76360435-7"},
-    {"nombre": "PUBLICIDAD CARLOS CORNEJO MORENO E.I.R.L.", "rut": "76696247-5"},
-    {"nombre": "ASTRA COMS SPA", "rut": "77956457-6"},
-    {"nombre": "WE-PROSPECT SPA", "rut": "77313675-0"},
-    {"nombre": "DI PAOLA & ASOCIADOS CHILE S A", "rut": "96994760-9"},
-    {"nombre": "PRODUCTORA DE EVENTOS YULIA SAVCHENKO EIRL", "rut": "76212375-4"},
-    {"nombre": "COMUNICATIO SPA", "rut": "76941483-5"},
-    {"nombre": "FRANCISCO DI PAOLA PUBLICIDAD E.I.R.L", "rut": "76493217-K"},
-    {"nombre": "MEET SUPER CHILE SPA", "rut": "76410455-2"},
-    {"nombre": "CARLOS ENRIQUE KULM CABELLO", "rut": "9323099-K"},
-    {"nombre": "EIGHT MARKETING LAB SPA", "rut": "76231321-9"},
-    {"nombre": "RODRIGO ALEJANDRO RETAMALES VIVANCO SERVICIOS TECNOLOGIA Y COMERCIO E.", "rut": "76234411-4"},
-    {"nombre": "SYNAPTICA COACHING SPA", "rut": "78052127-9"},
-    {"nombre": "SOCIEDAD DISTRIBUIDORA Y COMERCIALIZADORA LTI LIMITADA", "rut": "76510430-0"},
-    {"nombre": "SERVICIOS DE COMUNICACIONES LATINOAMERICA SPA", "rut": "78019373-5"},
-    {"nombre": "PORTONES AUTOMÁTICOS SPA", "rut": "78023923-9"},
-    {"nombre": "COMERCIALIZADORA MORALES, MONTANER Y PÉREZ LIMITADA", "rut": "77872358-1"}
+    {"nombre": "MI EMPRESA SPA (EJEMPLO)", "rut": "76.111.111-1", "clave_sii": ""}
 ]
 
 
 def leer_credenciales_env():
-    """Retorna un diccionario con las credenciales y variables actuales de .env."""
+    """Retorna un diccionario con las credenciales y variables actuales desde AppData."""
     cargar_variables_entorno()
     return {
         "SII_RUT": os.getenv("SII_RUT", "").strip(),
@@ -48,9 +30,8 @@ def leer_credenciales_env():
 
 
 def guardar_credenciales_env(sii_rut=None, sii_clave=None, rut_empresa=None, gemini_key=None, openai_key=None):
-    """Guarda o actualiza de forma segura las variables en el archivo .env de la raíz."""
-    base = obtener_ruta_base()
-    ruta_env = os.path.join(base, ".env")
+    """Guarda o actualiza de forma segura las variables en el archivo .env de AppData."""
+    ruta_env = os.path.join(obtener_ruta_appdata(), ".env")
 
     lineas_existentes = {}
     if os.path.exists(ruta_env):
@@ -77,7 +58,7 @@ def guardar_credenciales_env(sii_rut=None, sii_clave=None, rut_empresa=None, gem
 
     try:
         with open(ruta_env, "w", encoding="utf-8") as f:
-            f.write("# Credenciales Oficiales SII & API Keys\n")
+            f.write("# Credenciales Oficiales SII & API Keys (AppData Seguro)\n")
             for k, v in lineas_existentes.items():
                 f.write(f'{k}="{v}"\n')
                 os.environ[k] = v
@@ -87,14 +68,25 @@ def guardar_credenciales_env(sii_rut=None, sii_clave=None, rut_empresa=None, gem
 
 
 def cargar_configuracion(ruta_archivo=None):
-    """Carga el diccionario de configuración de la app."""
+    """Carga el diccionario de configuración de la app (con migración transparente desde la raíz local)."""
     ruta = ruta_archivo or CONFIG_FILE
+    
+    # Si no existe en AppData pero existe en la raíz del proyecto, migrar automáticamente
+    if ruta_archivo is None and not os.path.exists(CONFIG_FILE):
+        ruta_local = os.path.join(obtener_ruta_base(), "config_app.json")
+        if os.path.exists(ruta_local):
+            try:
+                shutil.copy2(ruta_local, CONFIG_FILE)
+            except Exception:
+                pass
+
     if os.path.exists(ruta):
         try:
             with open(ruta, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             pass
+            
     return {
         "correlativo": 2000,
         "contexto": "",
@@ -119,7 +111,7 @@ def cargar_configuracion(ruta_archivo=None):
 
 
 def guardar_configuracion(config_dict, ruta_archivo=None):
-    """Guarda el diccionario de configuración en disco."""
+    """Guarda el diccionario de configuración en AppData."""
     ruta = ruta_archivo or CONFIG_FILE
     try:
         with open(ruta, "w", encoding="utf-8") as f:
@@ -130,8 +122,18 @@ def guardar_configuracion(config_dict, ruta_archivo=None):
 
 
 def cargar_empresas(ruta_archivo=None):
-    """Carga la lista de empresas registradas."""
+    """Carga la lista de empresas registradas (con migración transparente desde la raíz local)."""
     ruta = ruta_archivo or EMPRESAS_FILE
+    
+    # Si no existe en AppData pero existe en la raíz del proyecto, migrar automáticamente
+    if ruta_archivo is None and not os.path.exists(EMPRESAS_FILE):
+        ruta_local = os.path.join(obtener_ruta_base(), "empresas.json")
+        if os.path.exists(ruta_local):
+            try:
+                shutil.copy2(ruta_local, EMPRESAS_FILE)
+            except Exception:
+                pass
+
     if os.path.exists(ruta):
         try:
             with open(ruta, "r", encoding="utf-8") as f:
@@ -140,12 +142,13 @@ def cargar_empresas(ruta_archivo=None):
                     return data
         except Exception:
             pass
+            
     guardar_empresas(LISTA_EMPRESAS_DEFECTO, ruta)
     return [dict(e) for e in LISTA_EMPRESAS_DEFECTO]
 
 
 def guardar_empresas(lista_empresas, ruta_archivo=None):
-    """Guarda la lista de empresas en disco."""
+    """Guarda la lista de empresas en disco en AppData."""
     ruta = ruta_archivo or EMPRESAS_FILE
     try:
         with open(ruta, "w", encoding="utf-8") as f:
